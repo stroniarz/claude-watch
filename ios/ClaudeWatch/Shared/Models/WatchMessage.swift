@@ -18,6 +18,11 @@ enum WatchMessage: Codable {
     case connectionStatus(ConnectionStatusMessage)
     case sessionsUpdate(SessionsUpdate)
 
+    // Phone-relay transport (used when the watch can't reach the bridge directly,
+    // e.g. away from home — the iPhone proxies the bridge over Tailscale).
+    case bridgeEvent(BridgeEventRelay)       // iPhone -> Watch: a raw bridge SSE event
+    case bridgeRequest(BridgeRequestRelay)   // Watch -> iPhone: an action to run on the bridge
+
     // MARK: - Payload Types
 
     struct VoiceCommand: Codable {
@@ -76,6 +81,30 @@ enum WatchMessage: Codable {
         }
     }
 
+    /// A raw bridge SSE event relayed from the iPhone to the watch. The watch
+    /// feeds `(event, data)` into the same parser it uses for its direct SSE
+    /// stream, so no per-event mapping is needed.
+    struct BridgeEventRelay: Codable {
+        let event: String   // e.g. "tool-output", "permission-request", "session", "stop"
+        let data: String    // raw JSON payload string
+
+        init(event: String, data: String) {
+            self.event = event
+            self.data = data
+        }
+    }
+
+    /// An action the watch wants run against the bridge, proxied by the iPhone.
+    struct BridgeRequestRelay: Codable {
+        let kind: String        // "command" | "sync"
+        let bodyJSON: String?   // for "command": the JSON body to POST to /command
+
+        init(kind: String, bodyJSON: String? = nil) {
+            self.kind = kind
+            self.bodyJSON = bodyJSON
+        }
+    }
+
     // MARK: - Dictionary keys
 
     private static let typeKey = "messageType"
@@ -90,6 +119,8 @@ enum WatchMessage: Codable {
         case .sessionStateUpdate:     return "sessionStateUpdate"
         case .connectionStatus:       return "connectionStatus"
         case .sessionsUpdate:         return "sessionsUpdate"
+        case .bridgeEvent:            return "bridgeEvent"
+        case .bridgeRequest:          return "bridgeRequest"
         }
     }
 
@@ -142,6 +173,10 @@ enum WatchMessage: Codable {
             try container.encode(status, forKey: .payload)
         case .sessionsUpdate(let update):
             try container.encode(update, forKey: .payload)
+        case .bridgeEvent(let ev):
+            try container.encode(ev, forKey: .payload)
+        case .bridgeRequest(let req):
+            try container.encode(req, forKey: .payload)
         }
     }
 
@@ -164,6 +199,10 @@ enum WatchMessage: Codable {
             self = .connectionStatus(try container.decode(ConnectionStatusMessage.self, forKey: .payload))
         case "sessionsUpdate":
             self = .sessionsUpdate(try container.decode(SessionsUpdate.self, forKey: .payload))
+        case "bridgeEvent":
+            self = .bridgeEvent(try container.decode(BridgeEventRelay.self, forKey: .payload))
+        case "bridgeRequest":
+            self = .bridgeRequest(try container.decode(BridgeRequestRelay.self, forKey: .payload))
         default:
             throw DecodingError.dataCorruptedError(
                 forKey: .messageType,

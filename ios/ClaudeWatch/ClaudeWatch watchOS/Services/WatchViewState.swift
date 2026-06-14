@@ -1,8 +1,14 @@
 import SwiftUI
 import WatchConnectivity
+import Combine
 
 class WatchViewState: ObservableObject {
     static let shared = WatchViewState()
+
+    /// How the watch is reaching the bridge.
+    /// - `.direct`: own SSE + HTTP over LAN (home).
+    /// - `.relay`: proxied through the paired iPhone over WCSession (away from home / Tailscale).
+    enum Transport { case direct, relay }
 
     @Published var isPaired: Bool = false
     @Published var sessionState: SessionState = .disconnected
@@ -11,6 +17,10 @@ class WatchViewState: ObservableObject {
     @Published var isStreaming: Bool = false
     @Published var taskCompleteSummary: String? = nil
     @Published var isReachable: Bool = false
+
+    @Published var transport: Transport = .direct
+    /// True when the paired iPhone is reachable over WCSession (relay is possible).
+    @Published var relayAvailable: Bool = false
 
     // Multi-session
     @Published var sessions: [AgentSession] = []
@@ -22,26 +32,89 @@ class WatchViewState: ObservableObject {
     }
 
     private let bridge = WatchBridgeClient.shared
+    private let relay = WatchSessionManager.shared
+    private var cancellables = Set<AnyCancellable>()
     private let maxLines = 200
     private var pollTimer: Timer?
     private var lastEventId: Int = 0
     private var sseTask: URLSessionDataTask?
 
     private init() {
+        // Wire the phone relay: activate WCSession, mirror reachability, and feed
+        // relayed bridge events into the same parser used for the direct stream.
+        relay.onMessageReceived = { [weak self] msg in
+            Task { @MainActor in self?.handleRelayMessage(msg) }
+        }
+        relay.activate()
+        observeRelayReachability()
+
         if bridge.isPaired {
             Task {
                 let reachable = await verifyBridge()
                 await MainActor.run {
                     if reachable {
+                        transport = .direct
                         isPaired = true
                         startEventStream()
                     } else {
-                        bridge.unpair()
-                        isPaired = false
+                        // Direct bridge unreachable (likely away from home). Don't drop
+                        // the user to onboarding — fall back to the iPhone relay if we can.
+                        if relayAvailable {
+                            enterRelayMode()
+                        }
                     }
                 }
             }
         }
+    }
+
+    // MARK: - Relay transport
+
+    private func observeRelayReachability() {
+        relay.$isReachable
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] reachable in
+                guard let self else { return }
+                self.relayAvailable = reachable
+                // Auto-adopt the relay when the phone shows up and we have no
+                // working direct connection (covers remote use without any taps).
+                if reachable, self.transport != .direct, self.sseTask == nil {
+                    self.enterRelayMode()
+                }
+            }
+            .store(in: &cancellables)
+    }
+
+    /// Switch to relay mode: drive the UI entirely from events the iPhone forwards.
+    func enterRelayMode() {
+        transport = .relay
+        isPaired = true
+        isReachable = true
+        sessionState.connection = .connected
+        // Ask the phone to replay sessions that are already running.
+        relay.send(.bridgeRequest(.init(kind: "sync")))
+    }
+
+    @MainActor
+    private func handleRelayMessage(_ message: WatchMessage) {
+        switch message {
+        case .bridgeEvent(let ev):
+            processEvent(type: ev.event, data: ev.data)
+        default:
+            break
+        }
+    }
+
+    /// Sends a `/command` body to the bridge through the iPhone relay.
+    private func sendRelayCommand(_ body: [String: Any]) {
+        guard let data = try? JSONSerialization.data(withJSONObject: body),
+              let json = String(data: data, encoding: .utf8) else { return }
+        relay.send(.bridgeRequest(.init(kind: "command", bodyJSON: json)))
+    }
+
+    /// Whether outbound actions should go over HTTP (direct) vs the relay.
+    private var useDirect: Bool {
+        transport == .direct && bridge.baseURL != nil && bridge.token != nil
     }
 
     private func verifyBridge() async -> Bool {
@@ -402,8 +475,7 @@ class WatchViewState: ObservableObject {
 
     func respondToPermissionWithOption(_ optionLabel: String, index: Int) {
         let approval = pendingApproval ?? activeSession?.pendingApproval
-        guard let permissionId = approval?.permissionId ?? UserDefaults.standard.string(forKey: "watch_pending_permission"),
-              let baseURL = bridge.baseURL, let token = bridge.token else { return }
+        guard let permissionId = approval?.permissionId ?? UserDefaults.standard.string(forKey: "watch_pending_permission") else { return }
 
         let sessionId = activeSession?.id
         pendingApproval = nil
@@ -411,12 +483,6 @@ class WatchViewState: ObservableObject {
             sessions[idx].pendingApproval = nil
             sessions[idx].activity = .running
         }
-
-        let url = baseURL.appendingPathComponent("command")
-        var urlRequest = URLRequest(url: url)
-        urlRequest.httpMethod = "POST"
-        urlRequest.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        urlRequest.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
 
         let body: [String: Any] = [
             "permissionId": permissionId,
@@ -424,23 +490,7 @@ class WatchViewState: ObservableObject {
             "selectedOption": optionLabel,
             "optionIndex": index
         ]
-        urlRequest.httpBody = try? JSONSerialization.data(withJSONObject: body)
-
-        URLSession.shared.dataTask(with: urlRequest) { [weak self] _, response, error in
-            if let error {
-                print("[WatchViewState] Permission response failed: \(error)")
-                return
-            }
-            guard let http = response as? HTTPURLResponse else { return }
-            if http.statusCode == 401 {
-                print("[WatchViewState] Permission response 401 — bridge token changed, re-pairing")
-                DispatchQueue.main.async { self?.handleTokenRejected() }
-            } else if http.statusCode == 404 {
-                print("[WatchViewState] Permission response 404 — permissionId not found (bridge restarted?)")
-            } else if http.statusCode != 200 {
-                print("[WatchViewState] Permission response unexpected status: \(http.statusCode)")
-            }
-        }.resume()
+        sendCommandBody(body)
 
         appendLine(TerminalLine(text: "→ \(optionLabel)", type: .command), sessionId: sessionId)
         UserDefaults.standard.removeObject(forKey: "watch_pending_permission")
@@ -448,8 +498,7 @@ class WatchViewState: ObservableObject {
 
     func respondToPermission(approved: Bool) {
         let approval = pendingApproval ?? activeSession?.pendingApproval
-        guard let permissionId = approval?.permissionId ?? UserDefaults.standard.string(forKey: "watch_pending_permission"),
-              let baseURL = bridge.baseURL, let token = bridge.token else { return }
+        guard let permissionId = approval?.permissionId ?? UserDefaults.standard.string(forKey: "watch_pending_permission") else { return }
 
         let sessionId = activeSession?.id
         pendingApproval = nil
@@ -458,39 +507,48 @@ class WatchViewState: ObservableObject {
             sessions[idx].activity = .running
         }
 
-        let url = baseURL.appendingPathComponent("command")
-        var urlRequest = URLRequest(url: url)
-        urlRequest.httpMethod = "POST"
-        urlRequest.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        urlRequest.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
-
         let body: [String: Any] = [
             "permissionId": permissionId,
             "decision": ["behavior": approved ? "allow" : "deny"]
         ]
-        urlRequest.httpBody = try? JSONSerialization.data(withJSONObject: body)
-
-        URLSession.shared.dataTask(with: urlRequest) { [weak self] _, response, error in
-            if let error {
-                print("[WatchViewState] Permission response failed: \(error)")
-                return
-            }
-            guard let http = response as? HTTPURLResponse else { return }
-            if http.statusCode == 401 {
-                print("[WatchViewState] Permission response 401 — bridge token changed, re-pairing")
-                DispatchQueue.main.async { self?.handleTokenRejected() }
-            } else if http.statusCode == 404 {
-                print("[WatchViewState] Permission response 404 — permissionId not found (bridge restarted?)")
-            } else if http.statusCode != 200 {
-                print("[WatchViewState] Permission response unexpected status: \(http.statusCode)")
-            }
-        }.resume()
+        sendCommandBody(body)
 
         appendLine(
             TerminalLine(text: approved ? "✓ Approved" : "✗ Denied", type: approved ? .output : .error),
             sessionId: sessionId
         )
         UserDefaults.standard.removeObject(forKey: "watch_pending_permission")
+    }
+
+    /// Posts a `/command` body either directly (LAN) or via the iPhone relay.
+    private func sendCommandBody(_ body: [String: Any]) {
+        guard useDirect, let baseURL = bridge.baseURL, let token = bridge.token else {
+            sendRelayCommand(body)
+            return
+        }
+
+        let url = baseURL.appendingPathComponent("command")
+        var urlRequest = URLRequest(url: url)
+        urlRequest.httpMethod = "POST"
+        urlRequest.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        urlRequest.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+        urlRequest.httpBody = try? JSONSerialization.data(withJSONObject: body)
+
+        URLSession.shared.dataTask(with: urlRequest) { [weak self] _, response, error in
+            if let error {
+                print("[WatchViewState] Command failed: \(error)")
+                return
+            }
+            guard let http = response as? HTTPURLResponse else { return }
+            if http.statusCode == 401 {
+                print("[WatchViewState] 401 — bridge token changed, re-pairing")
+                DispatchQueue.main.async { self?.handleTokenRejected() }
+            } else if http.statusCode == 404 {
+                print("[WatchViewState] 404 — permissionId not found (bridge restarted?)")
+            } else if http.statusCode != 200 {
+                print("[WatchViewState] Unexpected status: \(http.statusCode)")
+            }
+        }.resume()
     }
 
     // MARK: - Clear terminal
@@ -511,29 +569,26 @@ class WatchViewState: ObservableObject {
         appendLine(TerminalLine(text: "> \(text)", type: .command), sessionId: sid)
         appendLine(TerminalLine(text: "", type: .thinking), sessionId: sid)
 
-        guard let baseURL = bridge.baseURL, let token = bridge.token else { return }
-
-        let url = baseURL.appendingPathComponent("command")
-        var request = URLRequest(url: url)
-        request.httpMethod = "POST"
-        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
-
         var body: [String: Any] = ["command": text + "\n"]
         if let sid { body["sessionId"] = sid }
-        request.httpBody = try? JSONSerialization.data(withJSONObject: body)
-
-        URLSession.shared.dataTask(with: request) { _, _, error in
-            if let error { print("[WatchViewState] Command send failed: \(error)") }
-        }.resume()
+        sendCommandBody(body)
     }
 
     // MARK: - Token rejected (bridge restarted)
 
     func handleTokenRejected() {
-        print("[WatchViewState] Token rejected — resetting to pairing screen")
+        print("[WatchViewState] Token rejected — clearing direct connection")
         stopEventStream()
         bridge.unpair()
+
+        // If the iPhone relay is available, keep the user connected through it
+        // rather than bouncing back to the pairing screen.
+        if relayAvailable {
+            print("[WatchViewState] Falling back to iPhone relay")
+            enterRelayMode()
+            return
+        }
+
         isPaired = false
         terminalLines = []
         sessions = []
