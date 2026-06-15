@@ -8,11 +8,24 @@ final class BonjourDiscovery: ObservableObject {
 
     // MARK: - Types
 
-    struct DiscoveredService {
+    struct DiscoveredService: Identifiable {
         let name: String
         let host: String
         let port: UInt16
         let machineName: String?
+        var kind: String? = nil   // "tailscale" | "lan" (from the bridge), or nil
+
+        var id: String { "\(host):\(port)" }
+        var isTailscale: Bool { kind == "tailscale" }
+    }
+
+    /// One entry of the bridge's advertised address list (from /status).
+    private struct AddressEntry: Decodable {
+        let address: String
+        let kind: String
+    }
+    private struct StatusAddresses: Decodable {
+        let addresses: [AddressEntry]?
     }
 
     enum DiscoveryError: LocalizedError {
@@ -63,6 +76,50 @@ final class BonjourDiscovery: ObservableObject {
             throw error
             #endif
         }
+    }
+
+    /// Discovers the bridge and returns ALL of its reachable addresses
+    /// (LAN + Tailscale) so the user can pick one instead of typing it.
+    /// Finds the bridge via Bonjour, then asks it (/status) for its full
+    /// address list — which the bridge tags as "lan" / "tailscale".
+    @MainActor
+    func discoverCandidates() async throws -> [DiscoveredService] {
+        isSearching = true
+        defer { isSearching = false }
+
+        let found: DiscoveredService
+        do {
+            found = try await bonjourDiscover()
+        } catch {
+            #if targetEnvironment(simulator)
+            found = try await localhostFallback()
+            #else
+            throw error
+            #endif
+        }
+
+        // Ask the bridge for its full address list, tagged lan/tailscale.
+        if let entries = try? await fetchAddresses(host: found.host, port: found.port), !entries.isEmpty {
+            let candidates = entries.map {
+                DiscoveredService(name: found.name, host: $0.address, port: found.port,
+                                  machineName: found.machineName, kind: $0.kind)
+            }
+            // Tailscale first (works anywhere), then LAN.
+            return candidates.sorted { ($0.isTailscale ? 0 : 1) < ($1.isTailscale ? 0 : 1) }
+        }
+
+        // Older bridge without the address list — just the one we resolved.
+        return [found]
+    }
+
+    private func fetchAddresses(host: String, port: UInt16) async throws -> [AddressEntry] {
+        let url = URL(string: "http://\(host):\(port)/status")!
+        var request = URLRequest(url: url)
+        request.timeoutInterval = 4
+        let (data, response) = try await URLSession.shared.data(for: request)
+        guard let http = response as? HTTPURLResponse, http.statusCode == 200 else { return [] }
+        let status = try JSONDecoder().decode(StatusAddresses.self, from: data)
+        return status.addresses ?? []
     }
 
     /// Tries to connect to a specific IP on ports 7860-7869.

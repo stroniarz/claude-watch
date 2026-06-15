@@ -201,6 +201,27 @@ function requireAuth(req) {
   return token === sessionToken && sessionToken !== null;
 }
 
+/// True for Tailscale's CGNAT range 100.64.0.0/10 (100.64.x - 100.127.x).
+function isTailscaleAddress(ip) {
+  const m = ip.match(/^100\.(\d+)\./);
+  return m ? Number(m[1]) >= 64 && Number(m[1]) <= 127 : false;
+}
+
+/// All non-internal IPv4 addresses, Tailscale first (it works from anywhere),
+/// each tagged so the app can label the pick-list.
+function listCandidateAddresses() {
+  const out = [];
+  for (const addrs of Object.values(os.networkInterfaces())) {
+    for (const addr of addrs || []) {
+      if (addr.family === "IPv4" && !addr.internal) {
+        out.push({ address: addr.address, kind: isTailscaleAddress(addr.address) ? "tailscale" : "lan" });
+      }
+    }
+  }
+  out.sort((a, b) => (a.kind === "tailscale" ? -1 : 1) - (b.kind === "tailscale" ? -1 : 1));
+  return out;
+}
+
 function jsonResponse(res, status, body) {
   const payload = JSON.stringify(body);
   res.writeHead(status, {
@@ -1477,6 +1498,8 @@ function handleStatus(_req, res) {
     // Backward compat: expose the most recent active session's info
     hasPty: findMostRecentActiveSession() !== null,
     activeAgent: mostRecentRunningSession?.agent || null,
+    // All reachable addresses, so an already-connected client can refresh its list.
+    addresses: listCandidateAddresses(),
   });
 }
 
@@ -1556,6 +1579,11 @@ async function startServer() {
 
   const code = generatePairingCode();
 
+  // All reachable IPv4 addresses (LAN + Tailscale), advertised so the app can
+  // offer them as a pick-list instead of making the user type one by hand.
+  const candidateAddresses = listCandidateAddresses();
+  const addressesTxt = candidateAddresses.map((a) => a.address).join(",");
+
   // Bonjour
   bonjourInstance = new Bonjour();
   bonjourService = bonjourInstance.publish({
@@ -1568,6 +1596,7 @@ async function startServer() {
       bridgeId: BRIDGE_ID,
       sessionId: BRIDGE_ID, // backward compat
       machineName: os.hostname(),
+      addresses: addressesTxt,
     },
   });
 
@@ -1579,36 +1608,29 @@ async function startServer() {
   if (CODEX_BIN) agents.push("Codex");
   log("info", `Bridge ready. Available agents: ${agents.join(", ") || "none"}. Sessions spawn on demand.`);
 
-  // Get LAN IP
-  const interfaces = os.networkInterfaces();
-  let lanIP = "127.0.0.1";
-  for (const [, addrs] of Object.entries(interfaces)) {
-    for (const addr of addrs) {
-      if (addr.family === "IPv4" && !addr.internal) {
-        lanIP = addr.address;
-        break;
-      }
-    }
-    if (lanIP !== "127.0.0.1") break;
-  }
+  const lanIP = candidateAddresses.find((a) => a.kind === "lan")?.address || "127.0.0.1";
 
   const agentLine = agents.length ? agents.join(" + ") : "none";
-  const pairLine = sessionToken
-    ? "already paired"
-    : code;
+  // Always show the code — a restored token only means the LAST paired device
+  // stays valid; pairing a new device still needs the code (and replaces it).
   console.log("");
   console.log("╔═══════════════════════════════════════╗");
   console.log("║        AGENT WATCH BRIDGE             ║");
   console.log("╠═══════════════════════════════════════╣");
-  console.log(`║  Pairing Code:  ${pairLine.padEnd(20)}║`);
+  console.log(`║  Pairing Code:  ${code.padEnd(20)}║`);
   console.log(`║  IP Address:    ${lanIP.padEnd(20)}║`);
   console.log(`║  Port:          ${String(boundPort).padEnd(20)}║`);
   console.log(`║  Agents:        ${agentLine.padEnd(20)}║`);
   console.log("╚═══════════════════════════════════════╝");
+  if (candidateAddresses.length) {
+    console.log("  Addresses advertised to the app (pick in Agent Watch):");
+    for (const a of candidateAddresses) {
+      console.log(`    • ${a.address}${a.kind === "tailscale" ? "  (Tailscale — works anywhere)" : "  (LAN)"}`);
+    }
+  }
   if (sessionToken) {
-    console.log("  Restored saved pairing — existing devices stay connected.");
-    console.log("  To pair a NEW device, POST /pair-reset or delete:");
-    console.log(`  ${STATE_FILE}`);
+    console.log("  A saved pairing was restored (last device stays connected).");
+    console.log("  Entering the code above pairs a new device and replaces it.");
   }
   console.log("");
 

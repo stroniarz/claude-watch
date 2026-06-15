@@ -111,6 +111,12 @@ final class RelayService: ObservableObject {
         updateWatchState()
     }
 
+    /// Discovers the bridge and returns all of its reachable addresses so the
+    /// user can pick one (LAN / Tailscale) instead of typing it by hand.
+    func discoverCandidates() async throws -> [BonjourDiscovery.DiscoveredService] {
+        try await discovery.discoverCandidates()
+    }
+
     /// Pairs using a manual IP address (fallback when Bonjour fails on real devices).
     func pairWithIP(_ ip: String, code: String) async throws {
         print("[RelayService] Manual IP pair: \(ip), code: \(code)")
