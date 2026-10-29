@@ -23,6 +23,29 @@ struct OnboardingView: View {
                     .foregroundColor(Theme.Text.primary)
             }
 
+            // When the iPhone is reachable, offer a one-tap relay connection.
+            // This is the path for remote use (Tailscale): the watch never talks
+            // to the bridge directly — the phone proxies everything.
+            if session.relayAvailable {
+                Button { session.enterRelayMode() } label: {
+                    HStack(spacing: 4) {
+                        Image(systemName: "iphone.radiowaves.left.and.right")
+                        Text("Use iPhone")
+                            .font(.system(size: 13, weight: .semibold))
+                    }
+                    .foregroundColor(.black)
+                    .frame(maxWidth: .infinity)
+                    .frame(height: 34)
+                    .background(Theme.Accent.success)
+                    .clipShape(RoundedRectangle(cornerRadius: 8))
+                }
+                .buttonStyle(.plain)
+
+                Text("via paired iPhone — works anywhere")
+                    .font(.system(size: 9))
+                    .foregroundColor(Theme.Text.dimmed)
+            }
+
             if isSearching {
                 Spacer()
                 ProgressView()
