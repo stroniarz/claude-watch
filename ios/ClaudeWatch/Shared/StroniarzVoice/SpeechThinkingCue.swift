@@ -11,7 +11,9 @@ import Foundation
 final class SpeechThinkingCue: NSObject, ThinkingCue, @unchecked Sendable, AVSpeechSynthesizerDelegate {
     private let delay: Duration
     private let synthesizer = AVSpeechSynthesizer()
-    private var finished: CheckedContinuation<Void, Never>?
+    /// The utterance being waited for; callbacks and the safety timer only
+    /// finish their own utterance, never a later one.
+    private var waiting: (utterance: AVSpeechUtterance, cont: CheckedContinuation<Void, Never>)?
     private let lock = NSLock()
 
     init(delay: Duration = .milliseconds(1500)) {
@@ -46,26 +48,27 @@ final class SpeechThinkingCue: NSObject, ThinkingCue, @unchecked Sendable, AVSpe
         let utterance = AVSpeechUtterance(string: text)
         utterance.voice = AVSpeechSynthesisVoice(language: "pl-PL")
         await withCheckedContinuation { (cont: CheckedContinuation<Void, Never>) in
-            lock.withLock { finished = cont }
+            lock.withLock { waiting = (utterance, cont) }
             synthesizer.speak(utterance)
             // Never hang the intent if the synthesizer gets no audio route.
-            DispatchQueue.main.asyncAfter(deadline: .now() + 3) { [weak self] in self?.resume() }
+            DispatchQueue.main.asyncAfter(deadline: .now() + 3) { [weak self] in self?.resume(utterance) }
         }
     }
 
-    private func resume() {
+    private func resume(_ utterance: AVSpeechUtterance) {
         let cont = lock.withLock { () -> CheckedContinuation<Void, Never>? in
-            defer { finished = nil }
-            return finished
+            guard let waiting, waiting.utterance === utterance else { return nil }
+            self.waiting = nil
+            return waiting.cont
         }
         cont?.resume()
     }
 
     func speechSynthesizer(_ synthesizer: AVSpeechSynthesizer, didFinish utterance: AVSpeechUtterance) {
-        resume()
+        resume(utterance)
     }
 
     func speechSynthesizer(_ synthesizer: AVSpeechSynthesizer, didCancel utterance: AVSpeechUtterance) {
-        resume()
+        resume(utterance)
     }
 }

@@ -108,7 +108,7 @@ final class ConversationEngineTests: XCTestCase {
         for text in ["koniec", "Koniec.", "stop", "nie, dzięki", "Dziękuję!", "to wszystko", "nic", "na razie", "dobra, koniec"] {
             XCTAssertTrue(VoicePhrases.isEnd(text), text)
         }
-        for text in ["a nie Yard?", "co z Yardem", "nie wiem co z Gastronetem dzisiaj", "to", "Yard", "dlaczego koniec umowy z klientem jest jutro"] {
+        for text in ["a nie Yard?", "co z Yardem", "nie wiem co z Gastronetem dzisiaj", "to", "Yard", "dlaczego koniec umowy z klientem jest jutro", "kiedy koniec umowy?", "stop w Yardzie"] {
             XCTAssertFalse(VoicePhrases.isEnd(text), text)
         }
     }

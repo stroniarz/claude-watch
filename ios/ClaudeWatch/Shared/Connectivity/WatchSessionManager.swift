@@ -26,7 +26,7 @@ final class WatchSessionManager: NSObject, ObservableObject {
 
     /// Called for Stroniarz Voice relay requests (watch → iPhone); the reply
     /// carries the handsfree outcome. See `VoiceRelay`.
-    var onVoiceRequest: (([String: Any], @escaping ([String: Any]) -> Void) -> Void)?
+    var onVoiceRequest: (([String: Any], @escaping @Sendable ([String: Any]) -> Void) -> Void)?
 
     /// Called when the application context is updated by the counterpart.
     var onApplicationContextReceived: (([String: Any]) -> Void)?
@@ -193,7 +193,9 @@ extension WatchSessionManager: WCSessionDelegate {
     ) {
         if let request = message[VoiceRelay.requestKey] as? [String: Any] {
             if let onVoiceRequest {
-                onVoiceRequest(request, replyHandler)
+                // WCSession's reply handler may be called from any thread.
+                let reply = UncheckedReply(replyHandler)
+                onVoiceRequest(request) { reply.call($0) }
             } else {
                 replyHandler(VoiceRelay.encode(.failure(.server)))
             }
@@ -246,4 +248,10 @@ extension WatchSessionManager: WCSessionDelegate {
             print("[WatchSessionManager] Failed to decode incoming message: \(error)")
         }
     }
+}
+
+/// Lets the (thread-safe, but unannotated) WCSession reply handler cross into a Task.
+private struct UncheckedReply: @unchecked Sendable {
+    let call: ([String: Any]) -> Void
+    init(_ call: @escaping ([String: Any]) -> Void) { self.call = call }
 }

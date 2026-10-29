@@ -34,8 +34,9 @@ enum VoiceRelay {
 
     #if os(iOS)
     /// iPhone side: answer a relayed request with the HTTPS client.
-    static func handle(_ request: [String: Any], reply: @escaping ([String: Any]) -> Void,
+    static func handle(_ request: [String: Any], reply: @escaping @Sendable ([String: Any]) -> Void,
                        service: HandsfreeService = HandsfreeClient.fromSettings()) {
+        // Extract plain values before the Task: [String: Any] is not Sendable.
         let op = Op(rawValue: request["op"] as? String ?? "")
         let text = request["text"] as? String ?? ""
         let conversationID = request["conversation_id"] as? String

@@ -18,13 +18,14 @@ enum VoicePhrases {
     static let notConfigured = "Nie mam adresu albo tokenu. Otwórz aplikację Stroniarz i uzupełnij ustawienia."
     static let noPhone = "Nie widzę iPhone'a. Zbliż zegarek do telefonu i spróbuj jeszcze raz."
 
-    /// "Koniec", "stop" end the conversation anywhere in a short reply.
+    /// "Koniec", "stop" end the conversation when the reply is just a command
+    /// ("dobra, koniec"), not a question about it ("kiedy koniec umowy?").
     private static let strongEnd: Set<String> = ["koniec", "stop", "zakończ", "zakoncz", "wystarczy"]
     /// A reply made only of these words ends it too ("nie, dzięki", "to wszystko"),
     /// but "a nie Yard?" does not.
     private static let softEnd: Set<String> = [
         "nie", "nic", "dzięki", "dziękuję", "dzieki", "dziekuje", "pa", "to", "już", "juz",
-        "wszystko", "tyle", "na", "razie", "no", "ok", "okej",
+        "wszystko", "tyle", "na", "razie", "no", "ok", "okej", "dobra",
     ]
     private static let softMarkers: Set<String> = [
         "nie", "nic", "dzięki", "dziękuję", "dzieki", "dziekuje", "pa", "wszystko", "tyle", "razie",
@@ -40,8 +41,8 @@ enum VoicePhrases {
     static func isEnd(_ text: String) -> Bool {
         let w = words(text)
         guard !w.isEmpty, w.count <= 4 else { return false }
-        if w.contains(where: strongEnd.contains) { return true }
-        return w.allSatisfy(softEnd.contains) && w.contains(where: softMarkers.contains)
+        guard w.allSatisfy({ strongEnd.contains($0) || softEnd.contains($0) }) else { return false }
+        return w.contains(where: strongEnd.contains) || w.contains(where: softMarkers.contains)
     }
 
     /// "Raport", "raport Stroniarz", "daj raport" → read /brief instead of asking.
