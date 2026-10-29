@@ -131,6 +131,10 @@ In Xcode:
 
 Start any Claude Code session in a terminal. Every tool use (Read, Edit, Bash, Grep) streams to the watch and phone in real-time. Permission prompts appear as interactive cards.
 
+## Stroniarz Voice (fork)
+
+This fork adds hands-free Siri conversation with the Stroniarz handsfree API (`/ping`, `/brief`, `/ask`) on iPhone and Apple Watch: App Intents, a Keychain-stored token, a watch → iPhone relay and a settings screen. The app is shown as "Stroniarz". Setup, the Polish-Siri caveat and the device test checklist are in [docs/stroniarz-voice.md](docs/stroniarz-voice.md).
+
 ## Project Structure
 
 ```

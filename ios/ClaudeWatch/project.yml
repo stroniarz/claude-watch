@@ -46,6 +46,19 @@ targets:
         ARCHS: "arm64 arm64e arm64_32"
         "EXCLUDED_ARCHS[sdk=watchsimulator*]": arm64e
 
+  StroniarzVoiceTests:
+    type: bundle.unit-test
+    platform: iOS
+    sources:
+      - path: StroniarzVoiceTests
+      - path: Shared/StroniarzVoice
+        excludes:
+          - "Intents/**"
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: pl.stroniarz.claudewatch.voicetests
+        GENERATE_INFOPLIST_FILE: true
+
 schemes:
   ClaudeWatch:
     build:
@@ -54,6 +67,9 @@ schemes:
         ClaudeWatchWatch: all
     run:
       config: Debug
+    test:
+      targets:
+        - StroniarzVoiceTests
   ClaudeWatchWatch:
     build:
       targets:
