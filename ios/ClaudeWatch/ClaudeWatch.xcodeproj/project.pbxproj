@@ -7,12 +7,16 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		003DB10D0B0432E4336057B1 /* WidgetKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D50E11980E618B9FC724F9E9 /* WidgetKit.framework */; };
 		00472D1EE2187C564BC0F22B /* VoicePhrases.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2462FB6CD4379B9E70A3F4FB /* VoicePhrases.swift */; };
+		02F63FF8069B8294962F4F9D /* OrkaTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C3B0FCD5534B0E54DE4877CD /* OrkaTests.swift */; };
 		056CF0B6ED69C08286F46458 /* ApprovalRequest.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3B42442B8133715613F1B33C /* ApprovalRequest.swift */; };
 		0C354333AE5E18C4445957DD /* TerminalLine.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0FDEABAF052B796E83242EB1 /* TerminalLine.swift */; };
+		0C64C7E3FBB1562A9E16F2D2 /* OrkaCounters.swift in Sources */ = {isa = PBXBuildFile; fileRef = E43EB89509759C2CCA40418D /* OrkaCounters.swift */; };
 		13D7D73B8705DA9248E014EB /* WatchBridgeClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5B51788852DF163154F0D978 /* WatchBridgeClient.swift */; };
 		146A159A46875A11C9197458 /* ComplicationProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = E05A5819BA45145C8992456D /* ComplicationProvider.swift */; };
 		15E4E70FE334210E9CEE36C5 /* HandsfreeClientTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 690B161EDCB5BBD21782A012 /* HandsfreeClientTests.swift */; };
+		19033E21D59CF39E58729E88 /* OrkaHomeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD76D274827E5FB4C302D75C /* OrkaHomeView.swift */; };
 		1D59400FB238BFA588E37DB1 /* StatusDashboard.swift in Sources */ = {isa = PBXBuildFile; fileRef = 103838389D179B4E7BB59FE9 /* StatusDashboard.swift */; };
 		2030292035A662B5C1DD1C26 /* WatchMessage.swift in Sources */ = {isa = PBXBuildFile; fileRef = D315314A06584F20A95E7DB6 /* WatchMessage.swift */; };
 		2195C8818F84EDB4E0A5AD68 /* MultiSessionPager.swift in Sources */ = {isa = PBXBuildFile; fileRef = AD19B0B5E496A5FE71AC4A4B /* MultiSessionPager.swift */; };
@@ -20,9 +24,11 @@
 		269E1F8F1C49F944E3DC2FA5 /* ConversationEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1BAF8C222A0535A3C8B33CA /* ConversationEngine.swift */; };
 		28EAB75269BCCCC967B9CBC3 /* ClaudeMascot.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7B94DD051BD503B11365D6B9 /* ClaudeMascot.swift */; };
 		2BDFA739C47F26FFB2AEE59A /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = AB2A44058239AEE7EFC17FD2 /* Assets.xcassets */; };
+		2D0672DA18B548C5B18D9BDF /* OrkaClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0C8EFEBA941F01D4F5B08103 /* OrkaClient.swift */; };
 		2D1F77586019751BCB13FF28 /* OutputRingBuffer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3A8D708937263FAAC2A40CCA /* OutputRingBuffer.swift */; };
 		2E397EB60F3171514AE884D4 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BC84B5BA0FD69C5758F6CB21 /* SettingsView.swift */; };
 		2FF16E65BC48434288D37C29 /* CodexLogo.swift in Sources */ = {isa = PBXBuildFile; fileRef = 234623B6E982F519BDC3EF6D /* CodexLogo.swift */; };
+		2FFDFF171C0DE744836A51FC /* OrkaCounters.swift in Sources */ = {isa = PBXBuildFile; fileRef = E43EB89509759C2CCA40418D /* OrkaCounters.swift */; };
 		33760C5A9FFC556535CF3809 /* SessionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0197766C66BEEF61093A925 /* SessionView.swift */; };
 		3567322839F9B7C8982E2CC2 /* OnboardingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B55C9A1C1C5F307901694336 /* OnboardingView.swift */; };
 		3622A823E44B3B31F4B977DC /* ConversationEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1BAF8C222A0535A3C8B33CA /* ConversationEngine.swift */; };
@@ -32,11 +38,13 @@
 		45ACE32BBF4381937CE61A77 /* SpeechService.swift in Sources */ = {isa = PBXBuildFile; fileRef = B0710616CD3202EEE6E23496 /* SpeechService.swift */; };
 		480507DC048C7A9A178E5694 /* StroniarzIntents.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1B19EC7969C6BBFF89C15EB1 /* StroniarzIntents.swift */; };
 		49032A4666354165742750BC /* ClaudeWatchWatch.app in Embed Watch Content */ = {isa = PBXBuildFile; fileRef = 303943189CE302F154CA350B /* ClaudeWatchWatch.app */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		4CDA19DAEE75D62D08414B67 /* OrkaClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0C8EFEBA941F01D4F5B08103 /* OrkaClient.swift */; };
 		531EB5D5B94037CB354D4C5B /* HandsfreeClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = ECA3FE09BB728C508DFC2C2C /* HandsfreeClient.swift */; };
 		57F618E9AE45C5C0A4E0A828 /* VoiceRelay.swift in Sources */ = {isa = PBXBuildFile; fileRef = 91EE96449DBE113899AFDCB0 /* VoiceRelay.swift */; };
 		5878B94D3BB58C30DCBFB3AF /* SessionState.swift in Sources */ = {isa = PBXBuildFile; fileRef = 863F358F393A686BB368B2B0 /* SessionState.swift */; };
 		5980D58F184DBB03B1CE3D5C /* PairingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7286024A0F74A978473A0CF0 /* PairingView.swift */; };
 		5D30734C7D21934029F59BBB /* SessionState.swift in Sources */ = {isa = PBXBuildFile; fileRef = 863F358F393A686BB368B2B0 /* SessionState.swift */; };
+		60111670E387C8CEF6247F24 /* OrkaModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = C2EAF318AA476E7246E22BAF /* OrkaModel.swift */; };
 		60302CC0930C13773AB2B9F1 /* VoicePhrases.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2462FB6CD4379B9E70A3F4FB /* VoicePhrases.swift */; };
 		604C561E47617AC39C62C485 /* AgentIcon.swift in Sources */ = {isa = PBXBuildFile; fileRef = F237360F4AF9396B7B3C1881 /* AgentIcon.swift */; };
 		6A6376EBDE858B8212DE6FCF /* RelayService.swift in Sources */ = {isa = PBXBuildFile; fileRef = B401B158966DA9BF77B5EB50 /* RelayService.swift */; };
@@ -48,6 +56,8 @@
 		7CFCC520E5AF353A95FA0A70 /* HapticManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9FF877E177FAD26914DAA78D /* HapticManager.swift */; };
 		7D2835EE9D177222B72C6CDB /* ConnectionStatusView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D2084D859AEDF739A7B8CD49 /* ConnectionStatusView.swift */; };
 		7DD47601D714A440594BF768 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 7EA2FE39681F6542823D544C /* Assets.xcassets */; };
+		7EA1C734191547A3DB9C78FB /* OrkaSync.swift in Sources */ = {isa = PBXBuildFile; fileRef = 526701685CDB6C04A29C5842 /* OrkaSync.swift */; };
+		86803E7D9463067738191AAB /* OrkaCounters.swift in Sources */ = {isa = PBXBuildFile; fileRef = E43EB89509759C2CCA40418D /* OrkaCounters.swift */; };
 		8C1280014A4BBFC45C6D6CBF /* WatchSessionManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 68FBA67A3544CEF418CF023C /* WatchSessionManager.swift */; };
 		90B7313C239B5B0D98D9CF7F /* ApprovalRequest.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3B42442B8133715613F1B33C /* ApprovalRequest.swift */; };
 		94EB681D5217501D4D4496C5 /* HandsfreeSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = ADA7142B615C1EF5F80CA8A0 /* HandsfreeSettings.swift */; };
@@ -55,16 +65,21 @@
 		9DF1BFD28FED30EA58951D78 /* HandsfreeClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = ECA3FE09BB728C508DFC2C2C /* HandsfreeClient.swift */; };
 		9E5D88133812A8C54BE8B335 /* ClaudeWatchApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = F4BB0DBA06997A7A93FE5E2F /* ClaudeWatchApp.swift */; };
 		9F1C0E865B63F7A44569EBDE /* SSEClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7A793D9B158E02174ED968B0 /* SSEClient.swift */; };
+		A0CD240ABF9028F0365A57A4 /* OrkaClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0C8EFEBA941F01D4F5B08103 /* OrkaClient.swift */; };
 		A175593B84E37799D386C3D6 /* SpeechThinkingCue.swift in Sources */ = {isa = PBXBuildFile; fileRef = 372F301D8F29E739AEC108F6 /* SpeechThinkingCue.swift */; };
 		A26130D38A3CF5253274425A /* StroniarzIntents.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1B19EC7969C6BBFF89C15EB1 /* StroniarzIntents.swift */; };
+		A3FD464F96EE1A384B0B0BF6 /* OrkaWidget.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = B5C2CCEF65A7DFC510D6D475 /* OrkaWidget.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		A4537D76D204EE5733D1E5EE /* BridgeClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1CD1289B8157BD282826FB50 /* BridgeClient.swift */; };
 		A85E2DBB36D17C3FF7DCEF00 /* HandsfreeSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = ADA7142B615C1EF5F80CA8A0 /* HandsfreeSettings.swift */; };
 		AD633ECB9B0824FAD2B041BC /* VoiceRelay.swift in Sources */ = {isa = PBXBuildFile; fileRef = 91EE96449DBE113899AFDCB0 /* VoiceRelay.swift */; };
 		B36706C65A20B64A0DF81BD8 /* VoiceSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BE689BF1EDF69E6539BA3DF4 /* VoiceSettingsView.swift */; };
+		B3D9D543135C4FD3AED1A9D8 /* OrkaWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = 479652736EB6AA3E81BD9C79 /* OrkaWidget.swift */; };
 		B8715FECFCB144FCB05963D7 /* WatchViewState.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0559DABD121D25AC18E9CF46 /* WatchViewState.swift */; };
 		BE5F367582BDDF887D2B9676 /* OutputRingBuffer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3A8D708937263FAAC2A40CCA /* OutputRingBuffer.swift */; };
+		C03BE46DA3C707C933A576F8 /* SwiftUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 7FB8FE3DBEA6DDD0853AF035 /* SwiftUI.framework */; };
 		C14ED76603B07ED64BA096EA /* ClaudeWatchWatchApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 378B120DB4409D4BE7E1578E /* ClaudeWatchWatchApp.swift */; };
 		C19D82167F1828CB13CE9843 /* WatchSessionManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 68FBA67A3544CEF418CF023C /* WatchSessionManager.swift */; };
+		C86D0B9C32631D78A4C11205 /* OrkaSync.swift in Sources */ = {isa = PBXBuildFile; fileRef = 526701685CDB6C04A29C5842 /* OrkaSync.swift */; };
 		CA6DD0BE4E438FDF85EC6481 /* VoiceInputView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0B4CE22624BFF32BAC9AD1D8 /* VoiceInputView.swift */; };
 		D33D58F16A5735DE24FB6102 /* TerminalLine.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0FDEABAF052B796E83242EB1 /* TerminalLine.swift */; };
 		D73C73D521E0F95B2C18CC7B /* Color+Hex.swift in Sources */ = {isa = PBXBuildFile; fileRef = D1DF2BEEDD4C382E734A9998 /* Color+Hex.swift */; };
@@ -73,8 +88,10 @@
 		E98F410B3104C20DA98FCDD4 /* Color+Hex.swift in Sources */ = {isa = PBXBuildFile; fileRef = D1DF2BEEDD4C382E734A9998 /* Color+Hex.swift */; };
 		E9CD84EF8D892FDC607F4E35 /* SpeechThinkingCue.swift in Sources */ = {isa = PBXBuildFile; fileRef = 372F301D8F29E739AEC108F6 /* SpeechThinkingCue.swift */; };
 		ED44F4F97DC4EA01CA9CA7EF /* ClaudeMascot.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7B94DD051BD503B11365D6B9 /* ClaudeMascot.swift */; };
+		EF2F87ED856D086AF4D0AB11 /* OrkaSync.swift in Sources */ = {isa = PBXBuildFile; fileRef = 526701685CDB6C04A29C5842 /* OrkaSync.swift */; };
 		F178E4C50FC43666A9FCDE6E /* VoiceRelay.swift in Sources */ = {isa = PBXBuildFile; fileRef = 91EE96449DBE113899AFDCB0 /* VoiceRelay.swift */; };
 		FAF94EB271EDC52F9DFBAC7B /* AgentIcon.swift in Sources */ = {isa = PBXBuildFile; fileRef = F237360F4AF9396B7B3C1881 /* AgentIcon.swift */; };
+		FBA747D1678702EF55C4C970 /* OrkaCounters.swift in Sources */ = {isa = PBXBuildFile; fileRef = E43EB89509759C2CCA40418D /* OrkaCounters.swift */; };
 		FE05B7C03805E17E0EE758E1 /* HandsfreeSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = ADA7142B615C1EF5F80CA8A0 /* HandsfreeSettings.swift */; };
 /* End PBXBuildFile section */
 
@@ -85,6 +102,13 @@
 			proxyType = 1;
 			remoteGlobalIDString = A9E7C489C7D6CA4629614B5E;
 			remoteInfo = ClaudeWatchWatch;
+		};
+		A22BCD305A683A308AECCD64 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = D7FC3BB79624B236BFAC0797 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 083497D41EF4D56D9620D96B;
+			remoteInfo = OrkaWidget;
 		};
 /* End PBXContainerItemProxy section */
 
@@ -100,11 +124,23 @@
 			name = "Embed Watch Content";
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		C7B0951C46C3F314EFBCEDF7 /* Embed Foundation Extensions */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 13;
+			files = (
+				A3FD464F96EE1A384B0B0BF6 /* OrkaWidget.appex in Embed Foundation Extensions */,
+			);
+			name = "Embed Foundation Extensions";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
 		0559DABD121D25AC18E9CF46 /* WatchViewState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchViewState.swift; sourceTree = "<group>"; };
 		0B4CE22624BFF32BAC9AD1D8 /* VoiceInputView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VoiceInputView.swift; sourceTree = "<group>"; };
+		0C8EFEBA941F01D4F5B08103 /* OrkaClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OrkaClient.swift; sourceTree = "<group>"; };
 		0FADAF62ED166E55AA6A1222 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		0FDEABAF052B796E83242EB1 /* TerminalLine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TerminalLine.swift; sourceTree = "<group>"; };
 		103838389D179B4E7BB59FE9 /* StatusDashboard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StatusDashboard.swift; sourceTree = "<group>"; };
@@ -119,6 +155,8 @@
 		3A8D708937263FAAC2A40CCA /* OutputRingBuffer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OutputRingBuffer.swift; sourceTree = "<group>"; };
 		3B42442B8133715613F1B33C /* ApprovalRequest.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ApprovalRequest.swift; sourceTree = "<group>"; };
 		3EA2B15D26296793FFC0AC5D /* BonjourDiscovery.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BonjourDiscovery.swift; sourceTree = "<group>"; };
+		479652736EB6AA3E81BD9C79 /* OrkaWidget.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OrkaWidget.swift; sourceTree = "<group>"; };
+		526701685CDB6C04A29C5842 /* OrkaSync.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OrkaSync.swift; sourceTree = "<group>"; };
 		5B51788852DF163154F0D978 /* WatchBridgeClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchBridgeClient.swift; sourceTree = "<group>"; };
 		6024E04F2B37D81C8CA74D27 /* NotificationService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationService.swift; sourceTree = "<group>"; };
 		6346DB31D379397056FB2AEC /* AgentSession.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AgentSession.swift; sourceTree = "<group>"; };
@@ -130,29 +168,51 @@
 		7B94DD051BD503B11365D6B9 /* ClaudeMascot.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClaudeMascot.swift; sourceTree = "<group>"; };
 		7C8BCB36AFB378CF6512CD73 /* StroniarzVoiceTests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = StroniarzVoiceTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		7EA2FE39681F6542823D544C /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		7FB8FE3DBEA6DDD0853AF035 /* SwiftUI.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SwiftUI.framework; path = System/Library/Frameworks/SwiftUI.framework; sourceTree = SDKROOT; };
 		863F358F393A686BB368B2B0 /* SessionState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SessionState.swift; sourceTree = "<group>"; };
 		91EE96449DBE113899AFDCB0 /* VoiceRelay.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VoiceRelay.swift; sourceTree = "<group>"; };
 		98B6945BBB9FD551235039E4 /* ApprovalView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ApprovalView.swift; sourceTree = "<group>"; };
 		9FF877E177FAD26914DAA78D /* HapticManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HapticManager.swift; sourceTree = "<group>"; };
 		A0197766C66BEEF61093A925 /* SessionView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SessionView.swift; sourceTree = "<group>"; };
 		AB2A44058239AEE7EFC17FD2 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		AC024BD6AE4235575BB68A49 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		AD19B0B5E496A5FE71AC4A4B /* MultiSessionPager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MultiSessionPager.swift; sourceTree = "<group>"; };
 		ADA7142B615C1EF5F80CA8A0 /* HandsfreeSettings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HandsfreeSettings.swift; sourceTree = "<group>"; };
 		B0710616CD3202EEE6E23496 /* SpeechService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpeechService.swift; sourceTree = "<group>"; };
 		B1BAF8C222A0535A3C8B33CA /* ConversationEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConversationEngine.swift; sourceTree = "<group>"; };
 		B401B158966DA9BF77B5EB50 /* RelayService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RelayService.swift; sourceTree = "<group>"; };
 		B55C9A1C1C5F307901694336 /* OnboardingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingView.swift; sourceTree = "<group>"; };
+		B5C2CCEF65A7DFC510D6D475 /* OrkaWidget.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = OrkaWidget.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		BC84B5BA0FD69C5758F6CB21 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
 		BE689BF1EDF69E6539BA3DF4 /* VoiceSettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VoiceSettingsView.swift; sourceTree = "<group>"; };
 		BEE3C37C0C12B866A39D8889 /* ConversationEngineTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConversationEngineTests.swift; sourceTree = "<group>"; };
+		C2EAF318AA476E7246E22BAF /* OrkaModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OrkaModel.swift; sourceTree = "<group>"; };
+		C3B0FCD5534B0E54DE4877CD /* OrkaTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OrkaTests.swift; sourceTree = "<group>"; };
 		D1DF2BEEDD4C382E734A9998 /* Color+Hex.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Color+Hex.swift"; sourceTree = "<group>"; };
 		D2084D859AEDF739A7B8CD49 /* ConnectionStatusView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConnectionStatusView.swift; sourceTree = "<group>"; };
 		D315314A06584F20A95E7DB6 /* WatchMessage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchMessage.swift; sourceTree = "<group>"; };
+		D50E11980E618B9FC724F9E9 /* WidgetKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = WidgetKit.framework; path = System/Library/Frameworks/WidgetKit.framework; sourceTree = SDKROOT; };
+		DD76D274827E5FB4C302D75C /* OrkaHomeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OrkaHomeView.swift; sourceTree = "<group>"; };
 		E05A5819BA45145C8992456D /* ComplicationProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ComplicationProvider.swift; sourceTree = "<group>"; };
+		E063167D64E5B55FF66113B0 /* OrkaWidget.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = OrkaWidget.entitlements; sourceTree = "<group>"; };
+		E43EB89509759C2CCA40418D /* OrkaCounters.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OrkaCounters.swift; sourceTree = "<group>"; };
 		ECA3FE09BB728C508DFC2C2C /* HandsfreeClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HandsfreeClient.swift; sourceTree = "<group>"; };
+		ECDFCA3CF3E5D3EACFF56175 /* ClaudeWatchWatch.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = ClaudeWatchWatch.entitlements; sourceTree = "<group>"; };
 		F237360F4AF9396B7B3C1881 /* AgentIcon.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AgentIcon.swift; sourceTree = "<group>"; };
 		F4BB0DBA06997A7A93FE5E2F /* ClaudeWatchApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClaudeWatchApp.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		98ABCE4D5CC2EFAF1BF6DAE2 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				003DB10D0B0432E4336057B1 /* WidgetKit.framework in Frameworks */,
+				C03BE46DA3C707C933A576F8 /* SwiftUI.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
 		0B002EA4D95016E0FE96D37D /* Shared */ = {
@@ -166,12 +226,22 @@
 			path = Shared;
 			sourceTree = "<group>";
 		};
+		103A6B504659E3D64776CFB3 /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+				7FB8FE3DBEA6DDD0853AF035 /* SwiftUI.framework */,
+				D50E11980E618B9FC724F9E9 /* WidgetKit.framework */,
+			);
+			name = Frameworks;
+			sourceTree = "<group>";
+		};
 		183CB5AEA8E483CD2B062E52 /* Views */ = {
 			isa = PBXGroup;
 			children = (
 				98B6945BBB9FD551235039E4 /* ApprovalView.swift */,
 				AD19B0B5E496A5FE71AC4A4B /* MultiSessionPager.swift */,
 				B55C9A1C1C5F307901694336 /* OnboardingView.swift */,
+				DD76D274827E5FB4C302D75C /* OrkaHomeView.swift */,
 				A0197766C66BEEF61093A925 /* SessionView.swift */,
 				103838389D179B4E7BB59FE9 /* StatusDashboard.swift */,
 				0B4CE22624BFF32BAC9AD1D8 /* VoiceInputView.swift */,
@@ -183,6 +253,7 @@
 			isa = PBXGroup;
 			children = (
 				9FF877E177FAD26914DAA78D /* HapticManager.swift */,
+				C2EAF318AA476E7246E22BAF /* OrkaModel.swift */,
 				B0710616CD3202EEE6E23496 /* SpeechService.swift */,
 				5B51788852DF163154F0D978 /* WatchBridgeClient.swift */,
 				0559DABD121D25AC18E9CF46 /* WatchViewState.swift */,
@@ -202,6 +273,7 @@
 			isa = PBXGroup;
 			children = (
 				AB2A44058239AEE7EFC17FD2 /* Assets.xcassets */,
+				ECDFCA3CF3E5D3EACFF56175 /* ClaudeWatchWatch.entitlements */,
 				74426507D318951C7975BA9B /* Info.plist */,
 				DBB96B0AFBFF3C54D6CADEFD /* App */,
 				C296478CE6C46D7ED9B5B93B /* Complications */,
@@ -257,6 +329,9 @@
 				B1BAF8C222A0535A3C8B33CA /* ConversationEngine.swift */,
 				ECA3FE09BB728C508DFC2C2C /* HandsfreeClient.swift */,
 				ADA7142B615C1EF5F80CA8A0 /* HandsfreeSettings.swift */,
+				0C8EFEBA941F01D4F5B08103 /* OrkaClient.swift */,
+				E43EB89509759C2CCA40418D /* OrkaCounters.swift */,
+				526701685CDB6C04A29C5842 /* OrkaSync.swift */,
 				372F301D8F29E739AEC108F6 /* SpeechThinkingCue.swift */,
 				2462FB6CD4379B9E70A3F4FB /* VoicePhrases.swift */,
 				91EE96449DBE113899AFDCB0 /* VoiceRelay.swift */,
@@ -270,6 +345,7 @@
 			children = (
 				2B831D2BFB4BE9A940187EF9 /* ClaudeWatch.app */,
 				303943189CE302F154CA350B /* ClaudeWatchWatch.app */,
+				B5C2CCEF65A7DFC510D6D475 /* OrkaWidget.appex */,
 				7C8BCB36AFB378CF6512CD73 /* StroniarzVoiceTests.xctest */,
 			);
 			name = Products;
@@ -293,8 +369,10 @@
 			children = (
 				439B413A0E2A4970539D07EA /* ClaudeWatch iOS */,
 				31E31C89000EF57281FC4B62 /* ClaudeWatch watchOS */,
+				A7B077ADB99610B1566028C5 /* OrkaWidget */,
 				0B002EA4D95016E0FE96D37D /* Shared */,
 				F606864C6EC6EEA41EA8EE9B /* StroniarzVoiceTests */,
+				103A6B504659E3D64776CFB3 /* Frameworks */,
 				753823119B1136E5162D8180 /* Products */,
 			);
 			sourceTree = "<group>";
@@ -306,6 +384,16 @@
 				B401B158966DA9BF77B5EB50 /* RelayService.swift */,
 			);
 			path = Services;
+			sourceTree = "<group>";
+		};
+		A7B077ADB99610B1566028C5 /* OrkaWidget */ = {
+			isa = PBXGroup;
+			children = (
+				AC024BD6AE4235575BB68A49 /* Info.plist */,
+				E063167D64E5B55FF66113B0 /* OrkaWidget.entitlements */,
+				479652736EB6AA3E81BD9C79 /* OrkaWidget.swift */,
+			);
+			path = OrkaWidget;
 			sourceTree = "<group>";
 		};
 		C296478CE6C46D7ED9B5B93B /* Complications */ = {
@@ -340,6 +428,7 @@
 			children = (
 				BEE3C37C0C12B866A39D8889 /* ConversationEngineTests.swift */,
 				690B161EDCB5BBD21782A012 /* HandsfreeClientTests.swift */,
+				C3B0FCD5534B0E54DE4877CD /* OrkaTests.swift */,
 			);
 			path = StroniarzVoiceTests;
 			sourceTree = "<group>";
@@ -357,16 +446,36 @@
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
+		083497D41EF4D56D9620D96B /* OrkaWidget */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 3679A4B15D7BBE0717FC9F3E /* Build configuration list for PBXNativeTarget "OrkaWidget" */;
+			buildPhases = (
+				40364A33BC9482C078B4CC8B /* Sources */,
+				98ABCE4D5CC2EFAF1BF6DAE2 /* Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = OrkaWidget;
+			packageProductDependencies = (
+			);
+			productName = OrkaWidget;
+			productReference = B5C2CCEF65A7DFC510D6D475 /* OrkaWidget.appex */;
+			productType = "com.apple.product-type.app-extension";
+		};
 		A9E7C489C7D6CA4629614B5E /* ClaudeWatchWatch */ = {
 			isa = PBXNativeTarget;
 			buildConfigurationList = 814F10A13817BE8457BD5070 /* Build configuration list for PBXNativeTarget "ClaudeWatchWatch" */;
 			buildPhases = (
 				85A642A2C530EBF318E249E7 /* Sources */,
 				C1097430BBED347B6196C3AF /* Resources */,
+				C7B0951C46C3F314EFBCEDF7 /* Embed Foundation Extensions */,
 			);
 			buildRules = (
 			);
 			dependencies = (
+				138DEA89138611D3DCD3AB2A /* PBXTargetDependency */,
 			);
 			name = ClaudeWatchWatch;
 			packageProductDependencies = (
@@ -421,6 +530,10 @@
 				BuildIndependentTargetsInParallel = YES;
 				LastUpgradeCheck = 1430;
 				TargetAttributes = {
+					083497D41EF4D56D9620D96B = {
+						DevelopmentTeam = 6FS27R7XXZ;
+						ProvisioningStyle = Automatic;
+					};
 					A9E7C489C7D6CA4629614B5E = {
 						DevelopmentTeam = 6FS27R7XXZ;
 						ProvisioningStyle = Automatic;
@@ -451,6 +564,7 @@
 			targets = (
 				C84EB2FEED987DB13A41B90F /* ClaudeWatch */,
 				A9E7C489C7D6CA4629614B5E /* ClaudeWatchWatch */,
+				083497D41EF4D56D9620D96B /* OrkaWidget */,
 				D31462AD31ACC91E9C4BDA85 /* StroniarzVoiceTests */,
 			);
 		};
@@ -476,6 +590,15 @@
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
+		40364A33BC9482C078B4CC8B /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				FBA747D1678702EF55C4C970 /* OrkaCounters.swift in Sources */,
+				B3D9D543135C4FD3AED1A9D8 /* OrkaWidget.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		70EA3F813EC204CDE6BB618F /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -494,6 +617,9 @@
 				9DF1BFD28FED30EA58951D78 /* HandsfreeClient.swift in Sources */,
 				FE05B7C03805E17E0EE758E1 /* HandsfreeSettings.swift in Sources */,
 				26498CDC656411ABB0C94F7B /* NotificationService.swift in Sources */,
+				A0CD240ABF9028F0365A57A4 /* OrkaClient.swift in Sources */,
+				2FFDFF171C0DE744836A51FC /* OrkaCounters.swift in Sources */,
+				EF2F87ED856D086AF4D0AB11 /* OrkaSync.swift in Sources */,
 				2D1F77586019751BCB13FF28 /* OutputRingBuffer.swift in Sources */,
 				5980D58F184DBB03B1CE3D5C /* PairingView.swift in Sources */,
 				6A6376EBDE858B8212DE6FCF /* RelayService.swift in Sources */,
@@ -530,6 +656,11 @@
 				7CFCC520E5AF353A95FA0A70 /* HapticManager.swift in Sources */,
 				2195C8818F84EDB4E0A5AD68 /* MultiSessionPager.swift in Sources */,
 				3567322839F9B7C8982E2CC2 /* OnboardingView.swift in Sources */,
+				4CDA19DAEE75D62D08414B67 /* OrkaClient.swift in Sources */,
+				86803E7D9463067738191AAB /* OrkaCounters.swift in Sources */,
+				19033E21D59CF39E58729E88 /* OrkaHomeView.swift in Sources */,
+				60111670E387C8CEF6247F24 /* OrkaModel.swift in Sources */,
+				7EA1C734191547A3DB9C78FB /* OrkaSync.swift in Sources */,
 				BE5F367582BDDF887D2B9676 /* OutputRingBuffer.swift in Sources */,
 				5878B94D3BB58C30DCBFB3AF /* SessionState.swift in Sources */,
 				33760C5A9FFC556535CF3809 /* SessionView.swift in Sources */,
@@ -557,6 +688,10 @@
 				531EB5D5B94037CB354D4C5B /* HandsfreeClient.swift in Sources */,
 				15E4E70FE334210E9CEE36C5 /* HandsfreeClientTests.swift in Sources */,
 				A85E2DBB36D17C3FF7DCEF00 /* HandsfreeSettings.swift in Sources */,
+				2D0672DA18B548C5B18D9BDF /* OrkaClient.swift in Sources */,
+				0C64C7E3FBB1562A9E16F2D2 /* OrkaCounters.swift in Sources */,
+				C86D0B9C32631D78A4C11205 /* OrkaSync.swift in Sources */,
+				02F63FF8069B8294962F4F9D /* OrkaTests.swift in Sources */,
 				E9CD84EF8D892FDC607F4E35 /* SpeechThinkingCue.swift in Sources */,
 				00472D1EE2187C564BC0F22B /* VoicePhrases.swift in Sources */,
 				AD633ECB9B0824FAD2B041BC /* VoiceRelay.swift in Sources */,
@@ -570,6 +705,11 @@
 			isa = PBXTargetDependency;
 			target = A9E7C489C7D6CA4629614B5E /* ClaudeWatchWatch */;
 			targetProxy = 011ED6165F414E50AA2E4161 /* PBXContainerItemProxy */;
+		};
+		138DEA89138611D3DCD3AB2A /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 083497D41EF4D56D9620D96B /* OrkaWidget */;
+			targetProxy = A22BCD305A683A308AECCD64 /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
 
@@ -592,11 +732,33 @@
 			};
 			name = Debug;
 		};
+		518D2D5672F1056EBD0EF6E0 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ARCHS = "arm64 arm64e arm64_32";
+				CODE_SIGN_ENTITLEMENTS = OrkaWidget/OrkaWidget.entitlements;
+				"EXCLUDED_ARCHS[sdk=watchsimulator*]" = arm64e;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = OrkaWidget/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = pl.stroniarz.claudewatch.watchkitapp.orka;
+				PRODUCT_NAME = OrkaWidget;
+				SDKROOT = watchos;
+				SKIP_INSTALL = YES;
+				TARGETED_DEVICE_FAMILY = 4;
+			};
+			name = Release;
+		};
 		607340BA1661D7F454835FD3 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ARCHS = "arm64 arm64e arm64_32";
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_ENTITLEMENTS = "ClaudeWatch watchOS/ClaudeWatchWatch.entitlements";
 				"EXCLUDED_ARCHS[sdk=watchsimulator*]" = arm64e;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = "ClaudeWatch watchOS/Info.plist";
@@ -605,6 +767,27 @@
 				SDKROOT = watchos;
 				SKIP_INSTALL = YES;
 				SUPPORTS_MACCATALYST = NO;
+				TARGETED_DEVICE_FAMILY = 4;
+			};
+			name = Debug;
+		};
+		7C53B2C7B74EC1CC04DC4A47 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ARCHS = "arm64 arm64e arm64_32";
+				CODE_SIGN_ENTITLEMENTS = OrkaWidget/OrkaWidget.entitlements;
+				"EXCLUDED_ARCHS[sdk=watchsimulator*]" = arm64e;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = OrkaWidget/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = pl.stroniarz.claudewatch.watchkitapp.orka;
+				PRODUCT_NAME = OrkaWidget;
+				SDKROOT = watchos;
+				SKIP_INSTALL = YES;
 				TARGETED_DEVICE_FAMILY = 4;
 			};
 			name = Debug;
@@ -630,6 +813,7 @@
 			buildSettings = {
 				ARCHS = "arm64 arm64e arm64_32";
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_ENTITLEMENTS = "ClaudeWatch watchOS/ClaudeWatchWatch.entitlements";
 				"EXCLUDED_ARCHS[sdk=watchsimulator*]" = arm64e;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = "ClaudeWatch watchOS/Info.plist";
@@ -817,6 +1001,15 @@
 			buildConfigurations = (
 				8051EAEB66AEE3A8A2EC251A /* Debug */,
 				F26F19652FCE8566917AE421 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		3679A4B15D7BBE0717FC9F3E /* Build configuration list for PBXNativeTarget "OrkaWidget" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				7C53B2C7B74EC1CC04DC4A47 /* Debug */,
+				518D2D5672F1056EBD0EF6E0 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Debug;

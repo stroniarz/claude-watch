@@ -12,6 +12,30 @@ enum VoiceRelay {
 
     enum Op: String {
         case ping, brief, ask
+        /// STR-1463: liczniki panelu Orki i rozmowa z Orką.
+        case zegarek, orka
+    }
+
+    /// Klucz odpowiedzi z licznikami (JSON `OrkaCounters` jako Data).
+    static let countersKey = "counters"
+
+    static func encode(_ result: Result<OrkaCounters, HandsfreeFailure>) -> [String: Any] {
+        switch result {
+        case .success(let counters):
+            guard let data = try? JSONEncoder().encode(counters) else { return encode(HandsfreeOutcome.failure(.server)) }
+            return [countersKey: data]
+        case .failure(let f):
+            return encode(HandsfreeOutcome.failure(f))
+        }
+    }
+
+    static func decodeCounters(_ reply: [String: Any]) -> Result<OrkaCounters, HandsfreeFailure> {
+        if let data = reply[countersKey] as? Data,
+           let counters = try? JSONDecoder().decode(OrkaCounters.self, from: data) {
+            return .success(counters)
+        }
+        if let raw = reply["failure"] as? String { return .failure(HandsfreeFailure(rawValue: raw) ?? .server) }
+        return .failure(.server)
     }
 
     static func encode(_ outcome: HandsfreeOutcome) -> [String: Any] {
@@ -35,20 +59,23 @@ enum VoiceRelay {
     #if os(iOS)
     /// iPhone side: answer a relayed request with the HTTPS client.
     static func handle(_ request: [String: Any], reply: @escaping @Sendable ([String: Any]) -> Void,
-                       service: HandsfreeService = HandsfreeClient.fromSettings()) {
+                       service: HandsfreeService & OrkaService = HandsfreeClient.fromSettings()) {
         // Extract plain values before the Task: [String: Any] is not Sendable.
         let op = Op(rawValue: request["op"] as? String ?? "")
         let text = request["text"] as? String ?? ""
         let conversationID = request["conversation_id"] as? String
+        // Zegarek budzi appkę w tle: poproś system o czas na wywołanie HTTPS.
+        let background = BackgroundTime.begin()
         Task {
-            let outcome: HandsfreeOutcome
+            defer { background.end() }
             switch op {
-            case .ping:  outcome = await service.ping()
-            case .brief: outcome = await service.brief()
-            case .ask:   outcome = await service.ask(text, conversationID: conversationID)
-            case nil:    outcome = .failure(.server)
+            case .ping:    reply(encode(await service.ping()))
+            case .brief:   reply(encode(await service.brief()))
+            case .ask:     reply(encode(await service.ask(text, conversationID: conversationID)))
+            case .orka:    reply(encode(await service.askOrka(text)))
+            case .zegarek: reply(encode(await service.counters()))
+            case nil:     reply(encode(HandsfreeOutcome.failure(.server)))
             }
-            reply(encode(outcome))
         }
     }
 
@@ -87,22 +114,46 @@ struct RelayHandsfreeService: HandsfreeService {
     }
 
     private func send(_ op: VoiceRelay.Op, text: String = "", conversationID: String? = nil) async -> HandsfreeOutcome {
+        let timeout = op == .orka ? HandsfreeClient.orkaTimeout + 4 : Self.timeout
+        switch await relay(op, text: text, conversationID: conversationID, timeout: timeout) {
+        case .reply(let reply): return reply.outcome
+        case .timedOut:         return .failure(.timeout)
+        case .unavailable:      return await direct(op, text: text, conversationID: conversationID)
+        }
+    }
+
+    /// Odpowiedź iPhone'a zdekodowana od razu w wątku WCSession ([String: Any] nie jest Sendable).
+    struct RelayReply: Sendable {
+        let outcome: HandsfreeOutcome
+        let counters: Result<OrkaCounters, HandsfreeFailure>
+
+        init(_ reply: [String: Any]) {
+            outcome = VoiceRelay.decode(reply)
+            counters = VoiceRelay.decodeCounters(reply)
+        }
+    }
+
+    enum RelayResult: Sendable {
+        case reply(RelayReply)
+        case timedOut
+        case unavailable
+    }
+
+    /// Wysyła prośbę do iPhone'a; `unavailable` = telefon poza zasięgiem albo błąd WCSession.
+    private func relay(_ op: VoiceRelay.Op, text: String, conversationID: String?,
+                       timeout: TimeInterval) async -> RelayResult {
         let session = WCSession.default
         await Self.ensureActivated(session)
-        guard session.activationState == .activated, session.isReachable else {
-            return await direct(op, text: text, conversationID: conversationID)
-        }
+        guard session.activationState == .activated, session.isReachable else { return .unavailable }
         var payload: [String: Any] = ["op": op.rawValue, "text": text]
         if let conversationID { payload["conversation_id"] = conversationID }
         let message: [String: Any] = [VoiceRelay.requestKey: payload]
-        let relayed = await withCheckedContinuation { (cont: CheckedContinuation<HandsfreeOutcome?, Never>) in
+        return await withCheckedContinuation { (cont: CheckedContinuation<RelayResult, Never>) in
             let once = Once(cont)
-            session.sendMessage(message, replyHandler: { once.resume(VoiceRelay.decode($0)) },
-                                errorHandler: { _ in once.resume(nil) })
-            DispatchQueue.global().asyncAfter(deadline: .now() + Self.timeout) { once.resume(.failure(.timeout)) }
+            session.sendMessage(message, replyHandler: { once.resume(.reply(RelayReply($0))) },
+                                errorHandler: { _ in once.resume(.unavailable) })
+            DispatchQueue.global().asyncAfter(deadline: .now() + timeout) { once.resume(.timedOut) }
         }
-        if let relayed { return relayed }
-        return await direct(op, text: text, conversationID: conversationID)
     }
 
     /// A Siri launch may run the intent before any view has activated WCSession.
@@ -118,22 +169,41 @@ struct RelayHandsfreeService: HandsfreeService {
         guard HandsfreeSettings.isConfigured else { return .failure(.noPhone) }
         let client = HandsfreeClient.fromSettings()
         switch op {
-        case .ping:  return await client.ping()
-        case .brief: return await client.brief()
-        case .ask:   return await client.ask(text, conversationID: conversationID)
+        case .ping:    return await client.ping()
+        case .brief:   return await client.brief()
+        case .ask:     return await client.ask(text, conversationID: conversationID)
+        case .orka:    return await client.askOrka(text)
+        case .zegarek: return .failure(.server)   // liczniki idą przez counters()
         }
     }
 }
 
+extension RelayHandsfreeService: OrkaService {
+    /// Serwer czeka na świeży stan do 8 s, iPhone dokłada sieć.
+    static let countersTimeout: TimeInterval = HandsfreeClient.countersTimeout + 4
+
+    func counters() async -> Result<OrkaCounters, HandsfreeFailure> {
+        switch await relay(.zegarek, text: "", conversationID: nil, timeout: Self.countersTimeout) {
+        case .reply(let reply): return reply.counters
+        case .timedOut:         return .failure(.timeout)
+        case .unavailable:
+            guard HandsfreeSettings.isConfigured else { return .failure(.noPhone) }
+            return await HandsfreeClient.fromSettings().counters()
+        }
+    }
+
+    func askOrka(_ text: String) async -> HandsfreeOutcome { await send(.orka, text: text) }
+}
+
 /// Resumes a continuation at most once (reply vs. error vs. timeout race).
-private final class Once: @unchecked Sendable {
-    private var cont: CheckedContinuation<HandsfreeOutcome?, Never>?
+private final class Once<Value: Sendable>: @unchecked Sendable {
+    private var cont: CheckedContinuation<Value, Never>?
     private let lock = NSLock()
 
-    init(_ cont: CheckedContinuation<HandsfreeOutcome?, Never>) { self.cont = cont }
+    init(_ cont: CheckedContinuation<Value, Never>) { self.cont = cont }
 
-    func resume(_ value: HandsfreeOutcome?) {
-        let c = lock.withLock { () -> CheckedContinuation<HandsfreeOutcome?, Never>? in
+    func resume(_ value: Value) {
+        let c = lock.withLock { () -> CheckedContinuation<Value, Never>? in
             defer { cont = nil }
             return cont
         }
