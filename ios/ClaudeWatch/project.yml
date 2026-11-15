@@ -36,6 +36,7 @@ targets:
     sources:
       - path: "ClaudeWatch watchOS"
       - path: Shared
+      - path: OrkaWidget/OrkaWidgetView.swift
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: pl.stroniarz.claudewatch.watchkitapp
@@ -45,6 +46,31 @@ targets:
         SUPPORTS_MACCATALYST: false
         ARCHS: "arm64 arm64e arm64_32"
         "EXCLUDED_ARCHS[sdk=watchsimulator*]": arm64e
+        CODE_SIGN_ENTITLEMENTS: "ClaudeWatch watchOS/ClaudeWatchWatch.entitlements"
+    dependencies:
+      - target: OrkaWidget
+        embed: true
+
+  # STR-1463: komplikacja „Orka” (liczniki panelu) na tarczę zegarka.
+  OrkaWidget:
+    type: app-extension
+    platform: watchOS
+    sources:
+      - path: OrkaWidget
+      - path: Shared/StroniarzVoice/OrkaCounters.swift
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: pl.stroniarz.claudewatch.watchkitapp.orka
+        INFOPLIST_FILE: OrkaWidget/Info.plist
+        PRODUCT_NAME: OrkaWidget
+        GENERATE_INFOPLIST_FILE: false
+        CODE_SIGN_ENTITLEMENTS: OrkaWidget/OrkaWidget.entitlements
+        SKIP_INSTALL: true
+        ARCHS: "arm64 arm64e arm64_32"
+        "EXCLUDED_ARCHS[sdk=watchsimulator*]": arm64e
+    dependencies:
+      - sdk: WidgetKit.framework
+      - sdk: SwiftUI.framework
 
   StroniarzVoiceTests:
     type: bundle.unit-test

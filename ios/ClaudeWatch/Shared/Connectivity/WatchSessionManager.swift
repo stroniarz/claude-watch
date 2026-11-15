@@ -197,7 +197,7 @@ extension WatchSessionManager: WCSessionDelegate {
                 let reply = UncheckedReply(replyHandler)
                 onVoiceRequest(request) { reply.call($0) }
             } else {
-                replyHandler(VoiceRelay.encode(.failure(.server)))
+                replyHandler(VoiceRelay.encode(HandsfreeOutcome.failure(.server)))
             }
             return
         }
@@ -211,6 +211,7 @@ extension WatchSessionManager: WCSessionDelegate {
         _ session: WCSession,
         didReceiveUserInfo userInfo: [String: Any] = [:]
     ) {
+        if OrkaSync.handleUserInfo(userInfo) { return }
         #if os(watchOS)
         if let config = userInfo[VoiceRelay.configKey] as? [String: Any] {
             VoiceRelay.applyConfig(config)

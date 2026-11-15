@@ -27,18 +27,49 @@ enum Theme {
 @main
 struct ClaudeWatchWatchApp: App {
     @StateObject private var sessionManager = WatchViewState.shared
+    @StateObject private var orka = OrkaModel.shared
+    /// Nowe id resetuje nawigację do ekranu Orki (dotknięcie komplikacji).
+    @State private var rootID = UUID()
+    @Environment(\.scenePhase) private var scenePhase
 
     var body: some Scene {
         WindowGroup {
-            Group {
-                if sessionManager.isPaired {
-                    MultiSessionPager()
-                } else {
-                    OnboardingView()
-                }
+            NavigationStack {
+                #if DEBUG
+                if OrkaWidgetGallery.enabled { OrkaWidgetGallery() } else { OrkaHomeView(model: orka) }
+                #else
+                OrkaHomeView(model: orka)
+                #endif
             }
+            .id(rootID)
             .environmentObject(sessionManager)
+            .onOpenURL { url in
+                if url.scheme == "stroniarz", url.host == "orka" { rootID = UUID() }
+            }
+            .onAppear { OrkaBackground.schedule() }
+            .onChange(of: scenePhase) { _, phase in
+                // Powrót z tarczy (np. po dotknięciu komplikacji): świeże liczniki bez ponownego otwierania widoku.
+                if phase == .active { Task { await orka.refresh() } }
+            }
+        }
+        .backgroundTask(.appRefresh(OrkaBackground.task)) {
+            await OrkaBackground.run()
+        }
+        .backgroundTask(.watchConnectivity) {
+            await OrkaBackground.receive()
         }
     }
+}
 
+/// Dotychczasowy ekran Agent Watch (sesje Claude/Codex przez bridge), teraz pod „Sesje Claude”.
+struct LegacyRootView: View {
+    @EnvironmentObject private var sessionManager: WatchViewState
+
+    var body: some View {
+        if sessionManager.isPaired {
+            MultiSessionPager()
+        } else {
+            OnboardingView()
+        }
+    }
 }

@@ -93,3 +93,26 @@ Intenty są też w appce na zegarku. Pytanie idzie przez iPhone'a (WCSession), w
 - Testy: `StroniarzVoiceTests/` (mock `URLProtocol`, pętla rozmowy). Uruchomienie: `xcodebuild test -scheme ClaudeWatch -destination 'platform=iOS Simulator,name=iPhone 17 Pro'`.
 
 Serwer (`conversation_id`, ostatnie 3 pary w kontekście): stroniarz-hq, gałąź `str-1281-conversation` (z PR #93).
+
+## Orka na zegarku (STR-1463)
+
+Appka zegarka startuje na ekranie **Orka**: liczniki panelu i „Mów do Orki”. Dotychczasowe sesje Claude/Codex (bridge) są pod przyciskiem „Sesje Claude” na dole ekranu.
+
+```
+komplikacja ← App Group ← appka zegarka ⇄ WCSession ⇄ appka iPhone ⇄ HTTPS (Tailscale :8444)
+                                                       GET  /panel/api/zegarek   liczniki (~0,5 KB)
+                                                       POST /panel/api/jarvis    Orka
+```
+
+| Co | Jak działa |
+|---|---|
+| Kafelki | czeka na Ciebie · blokery (czerwone > 0) · szkice do wysłania · limit konta (najwyższy z k1/k2, czerwony ≥ 90%) + wiek danych; do 3 czekających sesji |
+| „Mów do Orki” | systemowe dyktowanie (`TextFieldLink`) → op `orka` przez iPhone'a → `/panel/api/jarvis` → odpowiedź na ekranie i głosem pl-PL (`AVSpeechSynthesizer`). T3 („zleć …”) → „Zleceń nie uruchamiam z zegarka. Powiedz to samo w panelu Orki…” (panel nie przechowuje propozycji, więc nie ma czego potwierdzać) — z zegarka nic się nie uruchamia. Limit czasu 28 s (+4 s relay). |
+| Komplikacja `OrkaWidget` | rodziny: prostokątna („Orka · 9 czeka · 3 blok. · 40 szkiców · k2 98%”), okrągła (liczba „czeka”, czerwona kropka przy blokerach), narożna, w linii. Dane > 2 h są wyszarzone. Dotknięcie → `stroniarz://orka`. |
+| Odświeżanie | na pierwszym planie przy otwarciu/powrocie; w tle `WKApplication.scheduleBackgroundRefresh` ~co 15 min (budżet watchOS). W tle krótka (6 s) próba op `zegarek` przez iPhone'a (`sendMessage` budzi appkę iOS). Gdy się nie da: `transferUserInfo(orkaRefresh)` (najwyżej co 30 min, poprzednia niedoręczona prośba anulowana) — **iOS nie gwarantuje obudzenia appki dla transferUserInfo**, więc ta ścieżka działa, gdy appka Stroniarz na iPhonie żyje w tle. iPhone łączy prośby (co ≥ 60 s), wysyła snapshot z datą danych przez `transferCurrentComplicationUserInfo` (albo zwykłe `transferUserInfo`, gdy budżet komplikacji się skończył); zegarek odbiera go w `.backgroundTask(.watchConnectivity)`, nie cofa się do starszych danych. |
+
+Kod: `Shared/StroniarzVoice/OrkaCounters.swift` (model + App Group `group.pl.stroniarz.claudewatch`, wspólny z widgetem), `OrkaClient.swift` (HTTPS), `OrkaSync.swift` (tło), `VoiceRelay.swift` (op `zegarek`, `orka`), `ClaudeWatch watchOS/Services/OrkaModel.swift`, `Views/OrkaHomeView.swift`, `OrkaWidget/`. Testy: `StroniarzVoiceTests/OrkaTests.swift`.
+
+Instalacja: jak wyżej (Xcode, zespół 6FS27R7XXZ, podpis automatyczny). Nowe: App Group w obu targetach zegarka — przy pierwszym buildzie na urządzenie Xcode musi ją zarejestrować (`-allowProvisioningUpdates` albo Run z Xcode z zalogowanym kontem). Komplikację dodaje się na tarczy: przytrzymaj tarczę → Edytuj → Komplikacje → Stroniarz → Orka.
+
+Podgląd w symulatorze (tylko Debug): `SIMCTL_CHILD_ORKA_SEED=<plik JSON z /panel/api/zegarek>` i opcjonalnie `SIMCTL_CHILD_ORKA_TALK="pytanie|odpowiedź"` przy `xcrun simctl launch`.
