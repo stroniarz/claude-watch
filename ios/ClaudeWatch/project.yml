@@ -77,6 +77,7 @@ targets:
     platform: iOS
     sources:
       - path: StroniarzVoiceTests
+      - path: "ClaudeWatch iOS/Orka/OrkaPhoneLogic.swift"
       - path: Shared/StroniarzVoice
         excludes:
           - "Intents/**"

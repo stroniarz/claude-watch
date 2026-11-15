@@ -69,7 +69,17 @@ enum HandsfreeSettings {
     }
 
     static var token: String? {
-        get { keychain.read().flatMap { $0.isEmpty ? nil : $0 } }
+        get {
+            #if DEBUG
+            // Symulator bez podpisu nie ma Keychain: token do zrzutów podglądu z pliku na Macu (tylko Debug).
+            if let path = ProcessInfo.processInfo.environment["ORKA_DEBUG_TOKEN_FILE"],
+               let raw = try? String(contentsOfFile: path, encoding: .utf8) {
+                let value = raw.trimmingCharacters(in: .whitespacesAndNewlines)
+                if !value.isEmpty { return value }
+            }
+            #endif
+            return keychain.read().flatMap { $0.isEmpty ? nil : $0 }
+        }
         set {
             if let value = newValue?.trimmingCharacters(in: .whitespacesAndNewlines), !value.isEmpty {
                 keychain.write(value)
