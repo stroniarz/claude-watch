@@ -125,11 +125,12 @@ private final class BackgroundIDBox: @unchecked Sendable {
 /// Czas pracy w tle dla wywołania HTTPS po przebudzeniu przez zegarek (tylko iOS).
 struct BackgroundTime: Sendable {
     #if os(iOS)
-    let id: UIBackgroundTaskIdentifier
+    /// Id zadania; handler wygaśnięcia i end() działają na wątku głównym, więc oddają je najwyżej raz.
+    fileprivate let box: BackgroundIDBox
 
     static func begin() -> BackgroundTime {
         // Testy jednostkowe działają bez appki (brak UIApplication).
-        guard Bundle.main.bundlePath.hasSuffix(".app") else { return BackgroundTime(id: .invalid) }
+        guard Bundle.main.bundlePath.hasSuffix(".app") else { return BackgroundTime(box: BackgroundIDBox()) }
         // Wywołanie z wątku WCSession: beginBackgroundTask jest bezpieczne wątkowo.
         let box = BackgroundIDBox()
         box.id = UIApplication.shared.beginBackgroundTask(withName: "StroniarzRelay") {
@@ -137,13 +138,16 @@ struct BackgroundTime: Sendable {
             UIApplication.shared.endBackgroundTask(box.id)
             box.id = .invalid
         }
-        return BackgroundTime(id: box.id)
+        return BackgroundTime(box: box)
     }
 
     func end() {
-        guard id != .invalid else { return }
-        let id = self.id
-        DispatchQueue.main.async { UIApplication.shared.endBackgroundTask(id) }
+        let box = self.box
+        DispatchQueue.main.async {
+            guard box.id != .invalid else { return }
+            UIApplication.shared.endBackgroundTask(box.id)
+            box.id = .invalid
+        }
     }
     #else
     static func begin() -> BackgroundTime { BackgroundTime() }

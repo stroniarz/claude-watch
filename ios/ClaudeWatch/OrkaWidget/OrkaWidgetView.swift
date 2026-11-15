@@ -56,7 +56,7 @@ struct OrkaWidgetView: View {
                 Image(systemName: "waveform")
                 Text("Orka").fontWeight(.semibold)
                 Spacer(minLength: 2)
-                Text(entry.snapshot?.ageText(at: entry.date) ?? "brak danych")
+                Text(((entry.counters?.bledy ?? 0) > 0 ? "! " : "") + (entry.snapshot?.ageText(at: entry.date) ?? "brak danych"))
                     .font(.system(size: 11))
                     .foregroundStyle(Palette.muted)
             }

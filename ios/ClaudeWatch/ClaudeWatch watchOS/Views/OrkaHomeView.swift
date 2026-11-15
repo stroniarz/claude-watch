@@ -26,6 +26,13 @@ struct OrkaHomeView: View {
                 if let c = model.snapshot?.counters, !c.czekajace.isEmpty {
                     waitingList(c)
                 }
+                if let c = model.snapshot?.counters, c.bledy > 0 {
+                    // Źródło (np. blokery, ogony) padło na Macu: liczba może być stara albo zerowa.
+                    Label("\(c.bledy) \(OrkaCounters.odmiana(c.bledy, "źródło niedostępne", "źródła niedostępne", "źródeł niedostępnych")) — sprawdź panel",
+                          systemImage: "exclamationmark.triangle.fill")
+                        .font(.system(size: 11))
+                        .foregroundStyle(OrkaTheme.amber)
+                }
                 if let error = model.error {
                     Text(error)
                         .font(.system(size: 11))
@@ -36,7 +43,8 @@ struct OrkaHomeView: View {
                     LegacyRootView()
                 } label: {
                     // Zatwierdzenie Claude czeka: wcześniej arkusz był od razu po otwarciu appki.
-                    if sessions.pendingApproval != nil {
+                    if sessions.sessions.contains(where: { $0.pendingApproval != nil })
+                        || (sessions.sessions.isEmpty && sessions.pendingApproval != nil) {
                         Label("Sesje Claude · zatwierdź", systemImage: "exclamationmark.circle.fill")
                             .font(.system(size: 13, weight: .semibold))
                             .foregroundStyle(OrkaTheme.amber)
@@ -52,6 +60,9 @@ struct OrkaHomeView: View {
         }
         .background(Color.black)
         .navigationDestination(isPresented: $showTalk) { OrkaTalkView(model: model) }
+        // Wyjście z rozmowy (także gestem wstecz w trakcie „Orka myśli…”) porzuca pytanie: bez czytania poza ekranem.
+        // Tu, a nie w onDisappear rozmowy: arkusz dyktowania „Zapytaj jeszcze” nie może kasować odpowiedzi.
+        .onChange(of: showTalk) { _, shown in if !shown { model.endTalk() } }
         .task {
             #if DEBUG
             if OrkaModel.preview, model.talk != .idle { showTalk = true }
@@ -214,8 +225,7 @@ struct OrkaTalkView: View {
             .padding(.horizontal, 4)
         }
         .navigationTitle("Orka")
-        // Wyjście z rozmowy (także gestem wstecz w trakcie „Orka myśli…”) porzuca pytanie: bez czytania poza ekranem.
-        .onDisappear { model.endTalk() }
+        .onDisappear { model.stopSpeaking() }
     }
 
     private func questionText(_ q: String) -> some View {

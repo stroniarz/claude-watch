@@ -116,6 +116,8 @@ final class OrkaModel: ObservableObject {
 /// Odpowiedź Orki głosem systemowym pl-PL (głos z panelu, `/mow`, to etap 2).
 final class OrkaVoice: NSObject, AVSpeechSynthesizerDelegate {
     private let synthesizer = AVSpeechSynthesizer()
+    /// Bieżąca wypowiedź: didCancel starej (po stop() w say()) nie może zgasić flagi nowej.
+    private var current: AVSpeechUtterance?
     var onFinish: (() -> Void)?
 
     override init() {
@@ -128,10 +130,12 @@ final class OrkaVoice: NSObject, AVSpeechSynthesizerDelegate {
         let utterance = AVSpeechUtterance(string: text)
         utterance.voice = Self.polishVoice
         utterance.rate = AVSpeechUtteranceDefaultSpeechRate * 1.05
+        current = utterance
         synthesizer.speak(utterance)
     }
 
     func stop() {
+        current = nil
         if synthesizer.isSpeaking { synthesizer.stopSpeaking(at: .immediate) }
     }
 
@@ -141,8 +145,16 @@ final class OrkaVoice: NSObject, AVSpeechSynthesizerDelegate {
         return polish.max { $0.quality.rawValue < $1.quality.rawValue } ?? AVSpeechSynthesisVoice(language: "pl-PL")
     }
 
-    func speechSynthesizer(_ synthesizer: AVSpeechSynthesizer, didFinish utterance: AVSpeechUtterance) { onFinish?() }
-    func speechSynthesizer(_ synthesizer: AVSpeechSynthesizer, didCancel utterance: AVSpeechUtterance) { onFinish?() }
+    func speechSynthesizer(_ synthesizer: AVSpeechSynthesizer, didFinish utterance: AVSpeechUtterance) { finished(utterance) }
+    func speechSynthesizer(_ synthesizer: AVSpeechSynthesizer, didCancel utterance: AVSpeechUtterance) { finished(utterance) }
+
+    private func finished(_ utterance: AVSpeechUtterance) {
+        DispatchQueue.main.async { [weak self] in
+            guard let self, utterance === self.current else { return }
+            self.current = nil
+            self.onFinish?()
+        }
+    }
 }
 
 /// Odświeżanie liczników w tle (budżet watchOS: zwykle kilka razy na godzinę przy komplikacji na tarczy).
@@ -170,7 +182,7 @@ enum OrkaBackground {
     /// Zadanie WatchConnectivity (paczka z iPhone'a przez transferCurrentComplicationUserInfo):
     /// aktywuj sesję i poczekaj chwilę, aż delegat odbierze zaległe dane.
     static func receive() async {
-        WatchSessionManager.shared.activate()
+        if WCSession.default.activationState != .activated { WatchSessionManager.shared.activate() }
         for _ in 0..<25 {
             if WCSession.default.activationState == .activated, !WCSession.default.hasContentPending { break }
             try? await Task.sleep(for: .milliseconds(200))
