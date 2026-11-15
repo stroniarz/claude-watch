@@ -36,6 +36,7 @@ targets:
     sources:
       - path: "ClaudeWatch watchOS"
       - path: Shared
+      - path: OrkaWidget/OrkaWidgetView.swift
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: pl.stroniarz.claudewatch.watchkitapp

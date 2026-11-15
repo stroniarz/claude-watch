@@ -1,5 +1,7 @@
 import AVFoundation
+import Combine
 import Foundation
+import WatchConnectivity
 import WatchKit
 
 /// Stan ekranu Orki na zegarku (STR-1463): liczniki z panelu i rozmowa.
@@ -63,6 +65,8 @@ final class OrkaModel: ObservableObject {
         loading = true
         defer { loading = false }
         switch await service.counters() {
+        case .success(let counters) where counters.wiekS == nil:
+            error = "Mac jeszcze zbiera stan panelu. Spróbuj za chwilę."
         case .success(let counters):
             OrkaSync.store(counters)
             snapshot = OrkaStore.load()
@@ -146,17 +150,30 @@ enum OrkaBackground {
     static let task = "orka-refresh"
     static let interval: TimeInterval = 15 * 60
 
+    @MainActor
     static func schedule(after interval: TimeInterval = OrkaBackground.interval) {
         WKApplication.shared().scheduleBackgroundRefresh(
             withPreferredDate: Date().addingTimeInterval(interval), userInfo: task as NSString) { _ in }
     }
 
-    /// Zadanie tła: najpierw „na żywo” przez iPhone'a, a gdy się nie da — prośba w kolejce WCSession.
+    /// Zadanie tła: najpierw planujemy następne (system może uśpić proces w trakcie), potem krótka próba
+    /// „na żywo” przez iPhone'a, a gdy się nie da — prośba w kolejce WCSession. Bez HTTPS z zegarka (brak Tailscale).
     static func run() async {
-        defer { schedule() }
-        switch await RelayHandsfreeService().counters() {
+        await schedule()
+        switch await RelayHandsfreeService().counters(timeout: 6, directFallback: false) {
+        case .success(let counters) where counters.wiekS == nil: break
         case .success(let counters): OrkaSync.store(counters)
         case .failure: OrkaSync.requestInBackground()
+        }
+    }
+
+    /// Zadanie WatchConnectivity (paczka z iPhone'a przez transferCurrentComplicationUserInfo):
+    /// aktywuj sesję i poczekaj chwilę, aż delegat odbierze zaległe dane.
+    static func receive() async {
+        WatchSessionManager.shared.activate()
+        for _ in 0..<25 {
+            if WCSession.default.activationState == .activated, !WCSession.default.hasContentPending { break }
+            try? await Task.sleep(for: .milliseconds(200))
         }
     }
 }

@@ -8,7 +8,9 @@ protocol OrkaService: Sendable {
 }
 
 enum OrkaPhrases {
-    static let confirmInPanel = "Potwierdź w panelu."
+    /// Propozycja T3 żyje tylko w odpowiedzi HTTP (panel jej nie przechowuje), więc z zegarka
+    /// nie ma czego „potwierdzić w panelu”: prosimy o powtórzenie zlecenia w panelu.
+    static let noOrdersFromWatch = "Zleceń nie uruchamiam z zegarka. Powiedz to samo w panelu Orki, tam je potwierdzisz."
     static let emptyAnswer = "Orka nic nie odpowiedziała. Spróbuj jeszcze raz."
 }
 
@@ -41,18 +43,15 @@ extension HandsfreeClient: OrkaService {
     }
 
     /// Odpowiedź `/panel/api/jarvis` → zdanie do przeczytania. T3 („zleć …”)
-    /// nigdy nie jest potwierdzane z zegarka: dopisujemy „Potwierdź w panelu.”.
+    /// nigdy nie jest uruchamiane ani potwierdzane z zegarka.
     static func orkaOutcome(_ data: Data) -> HandsfreeOutcome {
         guard let json = (try? JSONSerialization.jsonObject(with: data)) as? [String: Any] else {
             return .failure(.server)
         }
-        var text = (json["tekst"] as? String ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
-        if text.isEmpty { return .failure(.server, spoken: OrkaPhrases.emptyAnswer) }
         let proposal = json["propozycja"].map { !($0 is NSNull) } ?? false
-        if (json["poziom"] as? String == "T3" || proposal), !text.contains("panelu") {
-            text += (text.hasSuffix(".") || text.hasSuffix("!") || text.hasSuffix("?") ? " " : ". ")
-                + OrkaPhrases.confirmInPanel
-        }
+        if json["poziom"] as? String == "T3" || proposal { return .answer(OrkaPhrases.noOrdersFromWatch) }
+        let text = (json["tekst"] as? String ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
+        if text.isEmpty { return .failure(.server, spoken: OrkaPhrases.emptyAnswer) }
         return .answer(text)
     }
 

@@ -61,6 +61,12 @@ final class OrkaTests: XCTestCase {
         XCTAssertTrue(snap.isStale(at: now.addingTimeInterval(2 * 3600)))
     }
 
+    func testDraftsPlural() {
+        let cases = [(1, "1 szkic"), (2, "2 szkice"), (4, "4 szkice"), (5, "5 szkiców"), (12, "12 szkiców"),
+                     (22, "22 szkice"), (0, "0 szkiców"), (40, "40 szkiców")]
+        for (n, text) in cases { XCTAssertEqual(OrkaCounters(ogony: n).draftsText, text) }
+    }
+
     func testSnapshotRoundTrip() throws {
         let snap = OrkaSnapshot(counters: OrkaCounters(czeka: 2, limit: .init(konto: "1", proc: 5)))
         let back = try JSONDecoder().decode(OrkaSnapshot.self, from: JSONEncoder().encode(snap))
@@ -109,10 +115,10 @@ final class OrkaTests: XCTestCase {
     }
 
     func testT3IsNeverConfirmedFromWatch() {
-        let t3 = Data(#"{"tekst": "Przygotowałam zlecenie: audyt ircsklep", "poziom": "T3", "propozycja": {"opis": "x"}}"#.utf8)
-        XCTAssertEqual(HandsfreeClient.orkaOutcome(t3), .answer("Przygotowałam zlecenie: audyt ircsklep. Potwierdź w panelu."))
-        let already = Data(#"{"tekst": "Potwierdź w panelu.", "poziom": "T3", "propozycja": {}}"#.utf8)
-        XCTAssertEqual(HandsfreeClient.orkaOutcome(already), .answer("Potwierdź w panelu."))
+        let t3 = Data(#"{"tekst": "Przygotowałam zlecenie. Potwierdź je w panelu.", "poziom": "T3", "propozycja": {"opis": "x"}}"#.utf8)
+        XCTAssertEqual(HandsfreeClient.orkaOutcome(t3), .answer(OrkaPhrases.noOrdersFromWatch))
+        let proposalOnly = Data(#"{"tekst": "ok", "poziom": "T2", "propozycja": {}}"#.utf8)
+        XCTAssertEqual(HandsfreeClient.orkaOutcome(proposalOnly), .answer(OrkaPhrases.noOrdersFromWatch))
         XCTAssertEqual(HandsfreeClient.orkaOutcome(Data(#"{"tekst": "  "}"#.utf8)).failure, .server)
     }
 

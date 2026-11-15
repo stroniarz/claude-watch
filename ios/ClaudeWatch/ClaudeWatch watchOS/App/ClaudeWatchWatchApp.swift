@@ -35,7 +35,11 @@ struct ClaudeWatchWatchApp: App {
     var body: some Scene {
         WindowGroup {
             NavigationStack {
+                #if DEBUG
+                if OrkaWidgetGallery.enabled { OrkaWidgetGallery() } else { OrkaHomeView(model: orka) }
+                #else
                 OrkaHomeView(model: orka)
+                #endif
             }
             .id(rootID)
             .environmentObject(sessionManager)
@@ -50,6 +54,9 @@ struct ClaudeWatchWatchApp: App {
         }
         .backgroundTask(.appRefresh(OrkaBackground.task)) {
             await OrkaBackground.run()
+        }
+        .backgroundTask(.watchConnectivity) {
+            await OrkaBackground.receive()
         }
     }
 }

@@ -183,11 +183,16 @@ extension RelayHandsfreeService: OrkaService {
     static let countersTimeout: TimeInterval = HandsfreeClient.countersTimeout + 4
 
     func counters() async -> Result<OrkaCounters, HandsfreeFailure> {
-        switch await relay(.zegarek, text: "", conversationID: nil, timeout: Self.countersTimeout) {
+        await counters(timeout: Self.countersTimeout, directFallback: true)
+    }
+
+    /// `directFallback: false` w zadaniu tła: zegarek bez publicznego adresu Maca i tak nie połączy się sam.
+    func counters(timeout: TimeInterval, directFallback: Bool) async -> Result<OrkaCounters, HandsfreeFailure> {
+        switch await relay(.zegarek, text: "", conversationID: nil, timeout: timeout) {
         case .reply(let reply): return reply.counters
         case .timedOut:         return .failure(.timeout)
         case .unavailable:
-            guard HandsfreeSettings.isConfigured else { return .failure(.noPhone) }
+            guard directFallback, HandsfreeSettings.isConfigured else { return .failure(.noPhone) }
             return await HandsfreeClient.fromSettings().counters()
         }
     }

@@ -71,6 +71,15 @@ struct OrkaCounters: Codable, Equatable, Sendable {
         bledy = (try? c.decode(Int.self, forKey: .bledy)) ?? 0
     }
 
+    /// „1 szkic”, „2 szkice”, „5 szkiców”, „22 szkice”.
+    var draftsText: String { "\(ogony) " + Self.odmiana(ogony, "szkic", "szkice", "szkiców") }
+
+    static func odmiana(_ n: Int, _ jeden: String, _ kilka: String, _ wiele: String) -> String {
+        if n == 1 { return jeden }
+        if (2...4).contains(n % 10), !(12...14).contains(n % 100) { return kilka }
+        return wiele
+    }
+
     /// Krótki zapis limitu: „k2 97%”, albo nil bez danych.
     var limitShort: String? { limit.map { "k\($0.konto) \($0.proc)%" } }
 }

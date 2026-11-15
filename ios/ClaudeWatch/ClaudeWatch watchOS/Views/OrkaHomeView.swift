@@ -14,6 +14,7 @@ enum OrkaTheme {
 /// Ekran główny appki: liczniki panelu Orki i „Mów do Orki” (STR-1463).
 struct OrkaHomeView: View {
     @ObservedObject var model: OrkaModel
+    @EnvironmentObject private var sessions: WatchViewState
     @State private var showTalk = false
 
     var body: some View {
@@ -34,9 +35,16 @@ struct OrkaHomeView: View {
                 NavigationLink {
                     LegacyRootView()
                 } label: {
-                    Label("Sesje Claude", systemImage: "terminal")
-                        .font(.system(size: 13))
-                        .foregroundStyle(OrkaTheme.muted)
+                    // Zatwierdzenie Claude czeka: wcześniej arkusz był od razu po otwarciu appki.
+                    if sessions.pendingApproval != nil {
+                        Label("Sesje Claude · zatwierdź", systemImage: "exclamationmark.circle.fill")
+                            .font(.system(size: 13, weight: .semibold))
+                            .foregroundStyle(OrkaTheme.amber)
+                    } else {
+                        Label("Sesje Claude", systemImage: "terminal")
+                            .font(.system(size: 13))
+                            .foregroundStyle(OrkaTheme.muted)
+                    }
                 }
                 .padding(.top, 4)
             }
@@ -81,8 +89,8 @@ struct OrkaHomeView: View {
             OrkaTile(value: c.map { "\($0.czeka)" }, label: "czeka na Ciebie", color: OrkaTheme.amber)
             OrkaTile(value: c.map { "\($0.blokery)" }, label: "blokery",
                      color: (c?.blokery ?? 0) > 0 ? OrkaTheme.red : OrkaTheme.green)
-            OrkaTile(value: c.map { "\($0.ogony)" }, label: "szkice do wysłania", color: OrkaTheme.green)
-            OrkaTile(value: c?.limit.map { "\($0.proc)%" }, label: c?.limit.map { "limit konta \($0.konto)" } ?? "limit konta",
+            OrkaTile(value: c.map { "\($0.ogony)" }, label: "szkice", color: OrkaTheme.green)
+            OrkaTile(value: c?.limit.map { "\($0.proc)%" }, label: c?.limit.map { "limit k\($0.konto)" } ?? "limit konta",
                      color: (c?.limit?.proc ?? 0) >= 90 ? OrkaTheme.red : OrkaTheme.accentText)
         }
         .opacity(dim ? 0.55 : 1)
@@ -132,20 +140,21 @@ struct OrkaTile: View {
     let color: Color
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 2) {
+        VStack(alignment: .leading, spacing: 0) {
             Text(value ?? "—")
-                .font(.system(size: 26, weight: .medium, design: .rounded))
+                .font(.system(size: 22, weight: .medium, design: .rounded))
                 .foregroundStyle(color)
                 .minimumScaleFactor(0.6)
                 .lineLimit(1)
             Text(label)
                 .font(.system(size: 10))
                 .foregroundStyle(color.opacity(0.85))
-                .lineLimit(2)
-                .fixedSize(horizontal: false, vertical: true)
+                .lineLimit(1)
+                .minimumScaleFactor(0.8)
         }
-        .frame(maxWidth: .infinity, minHeight: 62, alignment: .topLeading)
-        .padding(7)
+        .frame(maxWidth: .infinity, alignment: .topLeading)
+        .padding(.horizontal, 7)
+        .padding(.vertical, 5)
         .background(RoundedRectangle(cornerRadius: 13).fill(color.opacity(0.16)))
         .accessibilityElement(children: .combine)
     }
@@ -205,7 +214,8 @@ struct OrkaTalkView: View {
             .padding(.horizontal, 4)
         }
         .navigationTitle("Orka")
-        .onDisappear { model.stopSpeaking() }
+        // Wyjście z rozmowy (także gestem wstecz w trakcie „Orka myśli…”) porzuca pytanie: bez czytania poza ekranem.
+        .onDisappear { model.endTalk() }
     }
 
     private func questionText(_ q: String) -> some View {

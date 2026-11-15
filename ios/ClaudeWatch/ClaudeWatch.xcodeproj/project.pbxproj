@@ -47,9 +47,11 @@
 		60111670E387C8CEF6247F24 /* OrkaModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = C2EAF318AA476E7246E22BAF /* OrkaModel.swift */; };
 		60302CC0930C13773AB2B9F1 /* VoicePhrases.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2462FB6CD4379B9E70A3F4FB /* VoicePhrases.swift */; };
 		604C561E47617AC39C62C485 /* AgentIcon.swift in Sources */ = {isa = PBXBuildFile; fileRef = F237360F4AF9396B7B3C1881 /* AgentIcon.swift */; };
+		66DE1F711644A5BD4331FAF7 /* OrkaWidgetView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA9D7EA6033D1233916080A6 /* OrkaWidgetView.swift */; };
 		6A6376EBDE858B8212DE6FCF /* RelayService.swift in Sources */ = {isa = PBXBuildFile; fileRef = B401B158966DA9BF77B5EB50 /* RelayService.swift */; };
 		6AFDB2757A13AF003F9CCAE1 /* AgentSession.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6346DB31D379397056FB2AEC /* AgentSession.swift */; };
 		6BB8C42991468DB0E89B48AA /* WatchMessage.swift in Sources */ = {isa = PBXBuildFile; fileRef = D315314A06584F20A95E7DB6 /* WatchMessage.swift */; };
+		72DF07CC328D61EC097A5C21 /* OrkaWidgetView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA9D7EA6033D1233916080A6 /* OrkaWidgetView.swift */; };
 		7444DC329E5872F468957C9B /* BonjourDiscovery.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3EA2B15D26296793FFC0AC5D /* BonjourDiscovery.swift */; };
 		79FBA3B9463F5F36337D5732 /* SpeechThinkingCue.swift in Sources */ = {isa = PBXBuildFile; fileRef = 372F301D8F29E739AEC108F6 /* SpeechThinkingCue.swift */; };
 		7C266D4E98C89230997C6714 /* AgentSession.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6346DB31D379397056FB2AEC /* AgentSession.swift */; };
@@ -72,6 +74,7 @@
 		A4537D76D204EE5733D1E5EE /* BridgeClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1CD1289B8157BD282826FB50 /* BridgeClient.swift */; };
 		A85E2DBB36D17C3FF7DCEF00 /* HandsfreeSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = ADA7142B615C1EF5F80CA8A0 /* HandsfreeSettings.swift */; };
 		AD633ECB9B0824FAD2B041BC /* VoiceRelay.swift in Sources */ = {isa = PBXBuildFile; fileRef = 91EE96449DBE113899AFDCB0 /* VoiceRelay.swift */; };
+		AEF64E33B7F02DA6F7FB3B91 /* OrkaWidgetGallery.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1374FD5756B7A200866D196 /* OrkaWidgetGallery.swift */; };
 		B36706C65A20B64A0DF81BD8 /* VoiceSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BE689BF1EDF69E6539BA3DF4 /* VoiceSettingsView.swift */; };
 		B3D9D543135C4FD3AED1A9D8 /* OrkaWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = 479652736EB6AA3E81BD9C79 /* OrkaWidget.swift */; };
 		B8715FECFCB144FCB05963D7 /* WatchViewState.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0559DABD121D25AC18E9CF46 /* WatchViewState.swift */; };
@@ -174,6 +177,8 @@
 		98B6945BBB9FD551235039E4 /* ApprovalView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ApprovalView.swift; sourceTree = "<group>"; };
 		9FF877E177FAD26914DAA78D /* HapticManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HapticManager.swift; sourceTree = "<group>"; };
 		A0197766C66BEEF61093A925 /* SessionView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SessionView.swift; sourceTree = "<group>"; };
+		A1374FD5756B7A200866D196 /* OrkaWidgetGallery.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OrkaWidgetGallery.swift; sourceTree = "<group>"; };
+		AA9D7EA6033D1233916080A6 /* OrkaWidgetView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OrkaWidgetView.swift; sourceTree = "<group>"; };
 		AB2A44058239AEE7EFC17FD2 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		AC024BD6AE4235575BB68A49 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		AD19B0B5E496A5FE71AC4A4B /* MultiSessionPager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MultiSessionPager.swift; sourceTree = "<group>"; };
@@ -242,6 +247,7 @@
 				AD19B0B5E496A5FE71AC4A4B /* MultiSessionPager.swift */,
 				B55C9A1C1C5F307901694336 /* OnboardingView.swift */,
 				DD76D274827E5FB4C302D75C /* OrkaHomeView.swift */,
+				A1374FD5756B7A200866D196 /* OrkaWidgetGallery.swift */,
 				A0197766C66BEEF61093A925 /* SessionView.swift */,
 				103838389D179B4E7BB59FE9 /* StatusDashboard.swift */,
 				0B4CE22624BFF32BAC9AD1D8 /* VoiceInputView.swift */,
@@ -392,6 +398,7 @@
 				AC024BD6AE4235575BB68A49 /* Info.plist */,
 				E063167D64E5B55FF66113B0 /* OrkaWidget.entitlements */,
 				479652736EB6AA3E81BD9C79 /* OrkaWidget.swift */,
+				AA9D7EA6033D1233916080A6 /* OrkaWidgetView.swift */,
 			);
 			path = OrkaWidget;
 			sourceTree = "<group>";
@@ -596,6 +603,7 @@
 			files = (
 				FBA747D1678702EF55C4C970 /* OrkaCounters.swift in Sources */,
 				B3D9D543135C4FD3AED1A9D8 /* OrkaWidget.swift in Sources */,
+				66DE1F711644A5BD4331FAF7 /* OrkaWidgetView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -661,6 +669,8 @@
 				19033E21D59CF39E58729E88 /* OrkaHomeView.swift in Sources */,
 				60111670E387C8CEF6247F24 /* OrkaModel.swift in Sources */,
 				7EA1C734191547A3DB9C78FB /* OrkaSync.swift in Sources */,
+				AEF64E33B7F02DA6F7FB3B91 /* OrkaWidgetGallery.swift in Sources */,
+				72DF07CC328D61EC097A5C21 /* OrkaWidgetView.swift in Sources */,
 				BE5F367582BDDF887D2B9676 /* OutputRingBuffer.swift in Sources */,
 				5878B94D3BB58C30DCBFB3AF /* SessionState.swift in Sources */,
 				33760C5A9FFC556535CF3809 /* SessionView.swift in Sources */,
