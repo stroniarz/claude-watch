@@ -110,7 +110,7 @@ enum VoiceRelay {
         let path = request["path"] as? String ?? ""
         let body = (request["body"] as? Data).flatMap { try? JSONSerialization.jsonObject(with: $0) as? [String: Any] }
         let bodyBox = UncheckedBody(body ?? [:])
-        let since = request["since"] as? Double ?? 0
+        let after = (request["after"] as? Int).flatMap { $0 >= 0 ? $0 : nil }   // -1 = bez kursora
         let wait = request["wait"] as? Double ?? 0
         let audioID = request["audioID"] as? String ?? ""
         // Zegarek budzi appkę w tle: poproś system o czas na wywołanie HTTPS.
@@ -124,11 +124,11 @@ enum VoiceRelay {
             case .orka:    reply(encode(await service.askOrka(text)))
             case .zegarek: reply(encode(await service.counters(fresh: text == "1")))
             case .akcja:
-                guard OrkaActions.paths.contains(path), body != nil else {
+                guard OrkaActions.paths.contains(path), !bodyBox.value.isEmpty else {
                     reply(encode(OrkaActionResult.notSent("Nieznana akcja."))); return
                 }
                 reply(encode(await service.action(path, body: bodyBox.value)))
-            case .odpowiedzi:  reply(encode(await service.orkaReplies(since: since, wait: wait)))
+            case .odpowiedzi:  reply(encode(await service.orkaReplies(after: after, wait: wait)))
             case .glos:        reply(["queued": await OrkaAudio.sendSpeech(text, id: audioID)])
             case nil:     reply(encode(HandsfreeOutcome.failure(.server)))
             }
@@ -180,7 +180,8 @@ struct RelayHandsfreeService: HandsfreeService {
         switch await relay(op, text: text, conversationID: conversationID, timeout: timeout) {
         case .reply(let reply): return reply.outcome
         case .timedOut:         return .failure(.timeout)
-        case .unavailable:      return await direct(op, text: text, conversationID: conversationID)
+        // Pytania (ping/brief/ask/orka) są bezpieczne do ponowienia: błąd wysyłki = próba bezpośrednia.
+        case .unavailable, .sendFailed: return await direct(op, text: text, conversationID: conversationID)
         }
     }
 
@@ -204,7 +205,10 @@ struct RelayHandsfreeService: HandsfreeService {
     enum RelayResult: Sendable {
         case reply(RelayReply)
         case timedOut
+        /// iPhone poza zasięgiem — nic nie wysłano.
         case unavailable
+        /// `sendMessage` zgłosił błąd po wysłaniu — wiadomość mogła dotrzeć (dla akcji: „nie wiadomo”).
+        case sendFailed
     }
 
     /// Wysyła prośbę do iPhone'a; `unavailable` = telefon poza zasięgiem albo błąd WCSession.
@@ -220,7 +224,7 @@ struct RelayHandsfreeService: HandsfreeService {
         return await withCheckedContinuation { (cont: CheckedContinuation<RelayResult, Never>) in
             let once = Once(cont)
             session.sendMessage(message, replyHandler: { once.resume(.reply(RelayReply($0))) },
-                                errorHandler: { _ in once.resume(.unavailable) })
+                                errorHandler: { _ in once.resume(.sendFailed) })
             DispatchQueue.global().asyncAfter(deadline: .now() + timeout) { once.resume(.timedOut) }
         }
     }
@@ -260,7 +264,7 @@ extension RelayHandsfreeService: OrkaService {
         switch await relay(.zegarek, text: "", conversationID: nil, timeout: timeout) {
         case .reply(let reply): return reply.counters
         case .timedOut:         return .failure(.timeout)
-        case .unavailable:
+        case .unavailable, .sendFailed:
             guard directFallback, HandsfreeSettings.isConfigured else { return .failure(.noPhone) }
             return await HandsfreeClient.fromSettings().counters()
         }
@@ -272,7 +276,7 @@ extension RelayHandsfreeService: OrkaService {
         switch await relay(.zegarek, text: fresh ? "1" : "", conversationID: nil, timeout: Self.countersTimeout) {
         case .reply(let reply): return reply.counters
         case .timedOut:         return .failure(.timeout)
-        case .unavailable:      return .failure(.noPhone)
+        case .unavailable, .sendFailed: return .failure(.noPhone)
         }
     }
 
@@ -282,17 +286,17 @@ extension RelayHandsfreeService: OrkaService {
         switch await relay(.akcja, text: "", conversationID: nil, timeout: HandsfreeClient.actionTimeout + 6,
                            extra: ["path": path, "body": data]) {
         case .reply(let reply): return reply.action
-        case .timedOut:         return .unknown("iPhone nie odpowiedział na czas — nie wiadomo, czy doszło. Sprawdź w sesji.")
-        case .unavailable:      return .notSent(VoicePhrases.noPhone)
+        case .timedOut, .sendFailed: return .unknown("iPhone nie potwierdził — nie wiadomo, czy doszło. Sprawdź w sesji, zanim wyślesz ponownie.")
+        case .unavailable:      return .notSent("Nie wysłano: " + VoicePhrases.noPhone)
         }
     }
 
-    func orkaReplies(since: Double, wait: Double) async -> Result<OrkaReplies, HandsfreeFailure> {
+    func orkaReplies(after: Int?, wait: Double) async -> Result<OrkaReplies, HandsfreeFailure> {
         switch await relay(.odpowiedzi, text: "", conversationID: nil, timeout: min(wait, 8) + 12,
-                           extra: ["since": since, "wait": wait]) {
+                           extra: ["after": after ?? -1, "wait": wait]) {
         case .reply(let reply): return reply.replies
         case .timedOut:         return .failure(.timeout)
-        case .unavailable:      return .failure(.noPhone)
+        case .unavailable, .sendFailed: return .failure(.noPhone)
         }
     }
 

@@ -23,6 +23,12 @@ enum OrkaAudio {
         session.transferFile(url, metadata: [idKey: id, mimeKey: audio.mime])
         return true
     }
+
+    /// iPhone: po wysłaniu (albo porażce) plik w tmp nie jest już potrzebny.
+    static func transferFinished(_ url: URL) {
+        guard url.path.contains("/orka-audio/") else { return }
+        try? FileManager.default.removeItem(at: url)
+    }
     #endif
 
     #if os(watchOS)
@@ -33,9 +39,11 @@ enum OrkaAudio {
         guard let id = file.metadata?[idKey] as? String, !id.isEmpty else { return false }
         let dir = FileManager.default.temporaryDirectory.appendingPathComponent("orka-audio", isDirectory: true)
         try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
-        // Stare pliki (poprzednie odpowiedzi) sprzątamy, zostawiając tylko nowy.
-        for old in (try? FileManager.default.contentsOfDirectory(at: dir, includingPropertiesForKeys: nil)) ?? [] {
-            try? FileManager.default.removeItem(at: old)
+        // Sprzątamy tylko pliki starsze niż 15 min — bieżąca odpowiedź („Powtórz”) zostaje.
+        let cutoff = Date().addingTimeInterval(-900)
+        for old in (try? FileManager.default.contentsOfDirectory(at: dir, includingPropertiesForKeys: [.contentModificationDateKey])) ?? [] {
+            let modified = (try? old.resourceValues(forKeys: [.contentModificationDateKey]))?.contentModificationDate ?? .distantPast
+            if modified < cutoff { try? FileManager.default.removeItem(at: old) }
         }
         let target = dir.appendingPathComponent(id + "." + (file.fileURL.pathExtension.isEmpty ? "mp3" : file.fileURL.pathExtension))
         guard (try? FileManager.default.copyItem(at: file.fileURL, to: target)) != nil else { return true }

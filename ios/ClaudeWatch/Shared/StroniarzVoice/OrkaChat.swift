@@ -19,25 +19,32 @@ enum OrkaActionResult: Equatable, Sendable {
 
     var delivered: Bool { if case .delivered = self { return true } else { return false } }
 
-    /// Odpowiedź HTTP 200 akcji → wynik. Błąd 4xx/5xx z `blad` → „Nie wysłano”, bo serwer odrzucił przed wysyłką.
+    static let unknownText = "Brak pewnej odpowiedzi Maca — nie wiadomo, czy doszło. Sprawdź w sesji, zanim wyślesz ponownie."
+
+    /// Odpowiedź HTTP akcji → wynik. „Nie wysłano” tylko gdy pewne: 2xx z `dostarczone: false` albo odmowa
+    /// walidacji 4xx (przed wykonaniem). 5xx, brak odpowiedzi i nieczytelne 2xx → „nie wiadomo” (review r1).
     static func parse(status: Int, data: Data) -> OrkaActionResult {
-        let json = (try? JSONSerialization.jsonObject(with: data)) as? [String: Any] ?? [:]
-        let message = (json["blad"] as? String)?.trimmingCharacters(in: .whitespacesAndNewlines)
-        if (200..<300).contains(status) {
+        let json = (try? JSONSerialization.jsonObject(with: data)) as? [String: Any]
+        let message = (json?["blad"] as? String)?.trimmingCharacters(in: .whitespacesAndNewlines)
+        if (200..<300).contains(status), let json {
             if json["ok"] as? Bool == true, json["dostarczone"] as? Bool == true {
                 return .delivered(to: json["do"] as? String)
             }
-            if json["wynik_nieznany"] as? Bool == true {
-                return .unknown(message ?? "Nie wiadomo, czy doszło — sprawdź w sesji.")
+            if json["dostarczone"] as? Bool == false {
+                return .notSent(message ?? "Nie wysłano.")
             }
-            return .notSent(message ?? "Nie wysłano.")
+            return .unknown(message ?? unknownText)
         }
-        if status == 0 { return .unknown("Brak odpowiedzi Maca — nie wiadomo, czy doszło. Sprawdź w sesji.") }
-        return .notSent(message.map { $0.hasPrefix("Nie wysłano") ? $0 : "Nie wysłano: \($0)" } ?? "Nie wysłano (błąd \(status)).")
+        if (400..<500).contains(status) {
+            return .notSent(message.map { $0.hasPrefix("Nie wysłano") ? $0 : "Nie wysłano: \($0)" } ?? "Nie wysłano (błąd \(status)).")
+        }
+        return .unknown(unknownText)
     }
 }
 
 struct OrkaReply: Codable, Equatable, Sendable {
+    /// Rosnący numer wpisu w skrzynce zegarka — kursor (nie czas).
+    let nr: Int
     let ts: Double
     let tekst: String
     /// Nadawca wpisu w skrzynce zegarka (np. „orka”).
@@ -45,7 +52,9 @@ struct OrkaReply: Codable, Equatable, Sendable {
 }
 
 struct OrkaReplies: Codable, Equatable, Sendable {
-    let teraz: Double
+    /// Największy numer w skrzynce (do ustawienia kursora bez czytania historii).
+    let ostatni: Int
+    /// Najstarsze najpierw, najwyżej 10.
     let odpowiedzi: [OrkaReply]
 }
 
@@ -53,8 +62,8 @@ struct OrkaReplies: Codable, Equatable, Sendable {
 enum OrkaActions {
     static let paths: Set<String> = ["orka/napisz", "pokieruj", "bloker/odpowiedz"]
 
-    static func tellOrka(_ text: String, id: UUID = UUID()) -> [String: Any] {
-        ["tekst": text, "potwierdzam": true, "id_akcji": id.uuidString.lowercased()]
+    static func tellOrka(_ text: String, source: String = "zegarek", id: UUID = UUID()) -> [String: Any] {
+        ["tekst": text, "zrodlo": source, "potwierdzam": true, "id_akcji": id.uuidString.lowercased()]
     }
 
     static func reply(to session: OrkaCounters.Waiting, text: String, id: UUID = UUID()) -> [String: Any] {
@@ -77,22 +86,35 @@ extension HandsfreeClient {
     func action(_ path: String, body: [String: Any]) async -> OrkaActionResult {
         guard OrkaActions.paths.contains(path),
               let data = try? JSONSerialization.data(withJSONObject: body) else { return .notSent("Nieznana akcja.") }
-        switch await callJSON("panel/api/" + path, method: "POST", body: data, timeout: Self.actionTimeout) {
-        case .success(let reply):
-            return OrkaActionResult.parse(status: 200, data: reply)
-        case .failure(let f, let spoken):
-            // Timeout/sieć po wysłaniu: nie wiemy, czy dotarło. Odmowa serwera (4xx z „blad”): na pewno nie wysłano.
-            switch f {
-            case .timeout, .noConnection: return .unknown("Brak odpowiedzi Maca — nie wiadomo, czy doszło. Sprawdź w sesji.")
-            default: return .notSent(spoken.hasPrefix("Nie wysłano") ? spoken : "Nie wysłano: \(spoken)")
-            }
+        guard let baseURL, let token else { return .notSent("Nie wysłano: " + HandsfreeFailure.notConfigured.phrase) }
+        var request = URLRequest(url: baseURL.appendingPathComponent("panel/api/" + path), timeoutInterval: Self.actionTimeout)
+        request.httpMethod = "POST"
+        request.httpBody = data
+        request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+        request.setValue("application/json", forHTTPHeaderField: "Accept")
+        request.setValue("application/json; charset=utf-8", forHTTPHeaderField: "Content-Type")
+        let config = session.configuration.copy() as? URLSessionConfiguration ?? .ephemeral
+        config.timeoutIntervalForRequest = Self.actionTimeout
+        config.timeoutIntervalForResource = Self.actionTimeout
+        let actionSession = URLSession(configuration: config)
+        defer { actionSession.finishTasksAndInvalidate() }
+        do {
+            let (reply, response) = try await actionSession.data(for: request)
+            return OrkaActionResult.parse(status: (response as? HTTPURLResponse)?.statusCode ?? 0, data: reply)
+        } catch let error as URLError where error.code == .cannotFindHost || error.code == .cannotConnectToHost
+                    || error.code == .notConnectedToInternet || error.code == .dnsLookupFailed {
+            // Nie połączono się w ogóle — na pewno nie wysłano.
+            return .notSent("Nie wysłano: " + VoicePhrases.noConnection)
+        } catch {
+            return .unknown(OrkaActionResult.unknownText)
         }
     }
 
-    /// Wypowiedzi Orki po `since` (serwer czeka do `wait` s, najwyżej 8).
-    func orkaReplies(since: Double, wait: Double) async -> Result<OrkaReplies, HandsfreeFailure> {
-        let query = [URLQueryItem(name: "od", value: String(format: "%.6f", since)),
-                     URLQueryItem(name: "czekaj", value: String(Int(min(max(wait, 0), 8))))]
+    /// Wpisy skrzynki zegarka o numerze > `after` (serwer czeka do `wait` s, najwyżej 8).
+    /// `after` = nil: tylko `ostatni` (ustawienie kursora bez historii).
+    func orkaReplies(after: Int?, wait: Double) async -> Result<OrkaReplies, HandsfreeFailure> {
+        var query = [URLQueryItem(name: "czekaj", value: String(Int(min(max(wait, 0), 8))))]
+        if let after { query.append(URLQueryItem(name: "po", value: String(after))) }
         switch await callJSON("panel/api/orka/odpowiedzi", method: "GET", body: nil, timeout: min(wait, 8) + 8, query: query) {
         case .failure(let f, _): return .failure(f)
         case .success(let data):
@@ -112,16 +134,17 @@ extension HandsfreeClient {
 
     /// Siri „Powiedz Orce”: wysyła do sesji orkiestratora i czeka do `wait` s na jej odpowiedź.
     func tellOrkaAndWait(_ text: String, wait: TimeInterval = 20) async -> String {
-        let sentAt = Date().timeIntervalSince1970 - 2
-        let result = await action("orka/napisz", body: OrkaActions.tellOrka(text))
+        // Kursor PRZED wysłaniem: odpowiedź Orki będzie miała większy numer.
+        guard case .success(let start) = await orkaReplies(after: nil, wait: 0) else {
+            return VoicePhrases.noConnection
+        }
+        let result = await action("orka/napisz", body: OrkaActions.tellOrka(text, source: "siri"))
         guard result.delivered else { return result.text }
-        var since = sentAt
         let deadline = Date().addingTimeInterval(wait)
         while Date() < deadline {
             let left = deadline.timeIntervalSinceNow
-            guard case .success(let replies) = await orkaReplies(since: since, wait: min(8, max(0, left))) else { break }
+            guard case .success(let replies) = await orkaReplies(after: start.ostatni, wait: min(8, max(0, left))) else { break }
             if !replies.odpowiedzi.isEmpty { return replies.odpowiedzi.map(\.tekst).joined(separator: " ") }
-            since = max(since, sentAt)
         }
         return OrkaPhrases.sentNoReplyYet
     }
@@ -133,5 +156,5 @@ enum OrkaVoiceChoice {
 }
 
 extension OrkaPhrases {
-    static let sentNoReplyYet = "Wysłałem do Orki. Jeszcze nie odpowiedziała — odpowiedź przyjdzie na zegarek i do voice-inbox."
+    static let sentNoReplyYet = "Wysłałem do Orki. Jeszcze nie odpowiedziała — jej odpowiedź zobaczysz w rozmowie z Orką na zegarku."
 }

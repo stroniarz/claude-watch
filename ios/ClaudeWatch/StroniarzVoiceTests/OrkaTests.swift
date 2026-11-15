@@ -128,6 +128,63 @@ final class OrkaTests: XCTestCase {
         XCTAssertEqual(outcome, .failure(.tooMany, spoken: "Za dużo pytań naraz. Odczekaj minutę."))
     }
 
+    // MARK: - Etap 2: akcje, rozmowa z Orką
+
+    func testActionResultParsing() {
+        func parse(_ status: Int, _ body: String) -> OrkaActionResult { OrkaActionResult.parse(status: status, data: Data(body.utf8)) }
+        XCTAssertEqual(parse(200, #"{"ok": true, "dostarczone": true, "do": "sesja k1:abcd1234"}"#), .delivered(to: "sesja k1:abcd1234"))
+        XCTAssertEqual(parse(200, #"{"ok": false, "dostarczone": false, "blad": "Nie wysłano: brak kanału."}"#), .notSent("Nie wysłano: brak kanału."))
+        XCTAssertEqual(parse(200, #"{"ok": false, "wynik_nieznany": true, "blad": "Nie potwierdzono."}"#), .unknown("Nie potwierdzono."))
+        // Niepewne przypadki to „nie wiadomo”, nigdy „nie wysłano” (review r1).
+        XCTAssertEqual(parse(200, "<html>"), .unknown(OrkaActionResult.unknownText))
+        XCTAssertEqual(parse(200, #"{"ok": true}"#), .unknown(OrkaActionResult.unknownText))
+        XCTAssertEqual(parse(500, #"{"ok": false, "blad": "Coś poszło nie tak"}"#), .unknown(OrkaActionResult.unknownText))
+        XCTAssertEqual(parse(0, ""), .unknown(OrkaActionResult.unknownText))
+        XCTAssertEqual(parse(400, #"{"ok": false, "blad": "Nieprawidłowy tekst."}"#), .notSent("Nie wysłano: Nieprawidłowy tekst."))
+        XCTAssertEqual(parse(429, #"{"ok": false, "blad": "Za dużo pytań naraz."}"#), .notSent("Nie wysłano: Za dużo pytań naraz."))
+    }
+
+    func testActionBodies() {
+        let id = UUID()
+        let s = OrkaCounters.Waiting(nazwa: "Yard", issue: "STR-1", konto: "2", id: "abcd1234", kanal: "sesja k2:abcd1234")
+        let reply = OrkaActions.reply(to: s, text: "wdrażaj", id: id)
+        XCTAssertEqual(reply["sesja_id"] as? String, "abcd1234")
+        XCTAssertEqual(reply["konto"] as? String, "2")
+        XCTAssertEqual(reply["kanal_oczekiwany"] as? String, "sesja k2:abcd1234")
+        XCTAssertEqual(reply["potwierdzam"] as? Bool, true)
+        XCTAssertEqual(reply["id_akcji"] as? String, id.uuidString.lowercased())
+        let blocker = OrkaActions.answer(blocker: 7, text: "ok, leć", id: id)
+        XCTAssertEqual(blocker["nr"] as? Int, 7)
+        let tell = OrkaActions.tellOrka("hej", source: "siri", id: id)
+        XCTAssertEqual(tell["zrodlo"] as? String, "siri")
+        XCTAssertEqual(OrkaActions.tellOrka("hej")["zrodlo"] as? String, "zegarek")
+    }
+
+    func testActionHTTPAndUnknownOnServerError() async throws {
+        MockURLProtocol.handler = { _ in (200, #"{"ok": true, "dostarczone": true, "do": "orkiestrator-k2"}"#) }
+        let ok = await client().action("orka/napisz", body: OrkaActions.tellOrka("Co z Yardem?"))
+        XCTAssertEqual(ok, .delivered(to: "orkiestrator-k2"))
+        let req = try XCTUnwrap(MockURLProtocol.requests.last)
+        XCTAssertEqual(req.url?.path, "/panel/api/orka/napisz")
+        XCTAssertEqual(req.timeoutInterval, HandsfreeClient.actionTimeout)
+        MockURLProtocol.handler = { _ in (502, "<html>bad gateway</html>") }
+        let gateway = await client().action("pokieruj", body: ["tekst": "x"])
+        XCTAssertEqual(gateway, .unknown(OrkaActionResult.unknownText))
+        let unknownPath = await client().action("zlec", body: ["x": 1])
+        XCTAssertEqual(unknownPath, .notSent("Nieznana akcja."))
+    }
+
+    func testOrkaRepliesCursorQuery() async throws {
+        MockURLProtocol.handler = { _ in (200, #"{"ok": true, "ostatni": 12, "odpowiedzi": [{"nr": 12, "ts": 1794769000.1234567, "tekst": "Przekazałam.", "od": "orka"}]}"#) }
+        let replies = try await client().orkaReplies(after: 11, wait: 8).get()
+        XCTAssertEqual(replies.ostatni, 12)
+        XCTAssertEqual(replies.odpowiedzi.first?.nr, 12)
+        let url = try XCTUnwrap(MockURLProtocol.requests.last?.url?.absoluteString)
+        XCTAssertTrue(url.contains("po=11") && url.contains("czekaj=8"), url)
+        _ = await client().orkaReplies(after: nil, wait: 0)
+        XCTAssertFalse(try XCTUnwrap(MockURLProtocol.requests.last?.url?.absoluteString).contains("po="))
+    }
+
     // MARK: - Relay
 
     func testRelayCountersRoundTrip() throws {

@@ -8,13 +8,13 @@ protocol OrkaService: Sendable {
     func askOrka(_ text: String) async -> HandsfreeOutcome
     /// Etap 2: akcje panelu (`orka/napisz`, `pokieruj`, `bloker/odpowiedz`) i odpowiedzi Orki-orkiestratorki.
     func action(_ path: String, body: [String: Any]) async -> OrkaActionResult
-    func orkaReplies(since: Double, wait: Double) async -> Result<OrkaReplies, HandsfreeFailure>
+    func orkaReplies(after: Int?, wait: Double) async -> Result<OrkaReplies, HandsfreeFailure>
 }
 
 extension OrkaService {
     func counters(fresh: Bool) async -> Result<OrkaCounters, HandsfreeFailure> { await counters() }
     func action(_ path: String, body: [String: Any]) async -> OrkaActionResult { .notSent("Akcja niedostępna.") }
-    func orkaReplies(since: Double, wait: Double) async -> Result<OrkaReplies, HandsfreeFailure> { .failure(.server) }
+    func orkaReplies(after: Int?, wait: Double) async -> Result<OrkaReplies, HandsfreeFailure> { .failure(.server) }
 }
 
 enum OrkaPhrases {

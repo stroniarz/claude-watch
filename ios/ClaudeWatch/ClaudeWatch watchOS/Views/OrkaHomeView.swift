@@ -26,10 +26,13 @@ struct OrkaHomeView: View {
                 tiles
                 talkToOrka
                 if !model.chat.isEmpty {
-                    NavigationLink { OrkaChatView(model: model) } label: {
-                        Label("Rozmowa z Orką", systemImage: "bubble.left.and.bubble.right")
-                            .font(.system(size: 13)).foregroundStyle(OrkaTheme.accentText)
+                    Button { showChat = true } label: {
+                        Label(model.unheard.isEmpty ? "Rozmowa z Orką" : "Orka odpowiedziała (\(model.unheard.count))",
+                              systemImage: model.unheard.isEmpty ? "bubble.left.and.bubble.right" : "bell.badge.fill")
+                            .font(.system(size: 13, weight: model.unheard.isEmpty ? .regular : .semibold))
+                            .foregroundStyle(model.unheard.isEmpty ? OrkaTheme.accentText : OrkaTheme.amber)
                     }
+                    .buttonStyle(.plain)
                 }
                 if let c = model.snapshot?.counters, !c.czekajace.isEmpty { waitingList(c) }
                 if let c = model.snapshot?.counters, !c.blokeryLista.isEmpty { blockerList(c) }
@@ -69,6 +72,10 @@ struct OrkaHomeView: View {
         .background(Color.black)
         .navigationDestination(isPresented: $showTalk) { OrkaTalkView(model: model) }
         .navigationDestination(isPresented: $showChat) { OrkaChatView(model: model) }
+        // Cel akcji zamrożony w chwili dotknięcia (wartość), nie po pozycji na liście — lista zmienia się
+        // po odświeżeniu stanu i „wdrażaj” nie może trafić do innej sesji (review r1, critical).
+        .navigationDestination(for: OrkaCounters.Waiting.self) { s in OrkaSessionView(model: model, session: s) }
+        .navigationDestination(for: OrkaCounters.Blocker.self) { b in OrkaBlockerView(model: model, blocker: b) }
         // Wyjście z szybkiego pytania porzuca je: bez czytania poza ekranem. Tu, a nie w onDisappear widoku:
         // arkusz dyktowania „Zapytaj jeszcze” nie może kasować odpowiedzi.
         .onChange(of: showTalk) { _, shown in if !shown { model.endTalk() } }
@@ -78,6 +85,7 @@ struct OrkaHomeView: View {
             if OrkaModel.preview, !model.chat.isEmpty { showChat = true }
             #endif
             await model.refresh()
+            model.checkUnheard()
         }
     }
 
@@ -149,8 +157,8 @@ struct OrkaHomeView: View {
     private func waitingList(_ c: OrkaCounters) -> some View {
         VStack(alignment: .leading, spacing: 4) {
             sectionTitle("CZEKA NA CIEBIE")
-            ForEach(Array(c.czekajace.enumerated()), id: \.offset) { _, s in
-                NavigationLink { OrkaSessionView(model: model, session: s) } label: {
+            ForEach(c.czekajace, id: \.self) { s in
+                NavigationLink(value: s) {
                     VStack(alignment: .leading, spacing: 1) {
                         Text(s.nazwa).font(.system(size: 13)).lineLimit(2)
                         Text("k\(s.konto)" + (s.issue.map { " · \($0)" } ?? "") + (s.kanal == nil ? "" : " · odpowiedz"))
@@ -173,7 +181,7 @@ struct OrkaHomeView: View {
         VStack(alignment: .leading, spacing: 4) {
             sectionTitle("BLOKERY")
             ForEach(c.blokeryLista) { b in
-                NavigationLink { OrkaBlockerView(model: model, blocker: b) } label: {
+                NavigationLink(value: b) {
                     VStack(alignment: .leading, spacing: 1) {
                         Text("#\(b.nr) \(b.potrzebuje)").font(.system(size: 12)).lineLimit(2)
                         Text(b.typ + (b.issue.map { " · \($0)" } ?? ""))
@@ -265,7 +273,8 @@ struct OrkaChatView: View {
             .padding(.horizontal, 4)
         }
         .navigationTitle("Orka")
-        .onAppear { model.catchUpReplies() }
+        .onAppear { model.chatAppeared() }
+        .onDisappear { model.chatDisappeared() }
     }
 
     @ViewBuilder private var status: some View {

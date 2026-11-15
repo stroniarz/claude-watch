@@ -5,8 +5,9 @@ import SwiftUI
 struct OrkaSendBox: View {
     let target: String
     @Binding var pending: String?
+    /// Podniesione do rodzica: w trakcie wysyłki inne przyciski są wyłączone (wynik dotyczy wysłanego tekstu).
+    @Binding var sending: Bool
     let send: (String) async -> OrkaActionResult
-    @State private var sending = false
     @State private var result: OrkaActionResult?
 
     var body: some View {
@@ -30,6 +31,7 @@ struct OrkaSendBox: View {
                         }
                         .tint(OrkaTheme.accent)
                         Button("Anuluj", role: .cancel) { pending = nil }
+                            .disabled(sending)
                     }
                 }
             }
@@ -49,6 +51,7 @@ struct OrkaSessionView: View {
     @ObservedObject var model: OrkaModel
     let session: OrkaCounters.Waiting
     @State private var pending: String?
+    @State private var sending = false
 
     var body: some View {
         ScrollView {
@@ -60,6 +63,7 @@ struct OrkaSessionView: View {
                     ForEach(OrkaActions.quickReplies, id: \.self) { reply in
                         Button(reply) { pending = reply }
                             .tint(reply == "wdrażaj" || reply == "zmerguj" ? OrkaTheme.amber : OrkaTheme.accent)
+                            .disabled(sending)
                     }
                     TextFieldLink(prompt: Text("Napisz do sesji")) {
                         Label("Podyktuj…", systemImage: "mic.fill").font(.system(size: 13))
@@ -67,7 +71,8 @@ struct OrkaSessionView: View {
                         let clean = text.trimmingCharacters(in: .whitespacesAndNewlines)
                         if !clean.isEmpty { pending = clean }
                     }
-                    OrkaSendBox(target: target, pending: $pending) { text in
+                    .disabled(sending)
+                    OrkaSendBox(target: "„\(session.nazwa)” (\(target))", pending: $pending, sending: $sending) { text in
                         await model.reply(to: session, text: text)
                     }
                     Text("Albo powiedz Orce — ona przekaże dalej.")
@@ -94,6 +99,7 @@ struct OrkaBlockerView: View {
     @ObservedObject var model: OrkaModel
     let blocker: OrkaCounters.Blocker
     @State private var pending: String?
+    @State private var sending = false
 
     var body: some View {
         ScrollView {
@@ -104,14 +110,15 @@ struct OrkaBlockerView: View {
                 Text(blocker.sesja + (blocker.issue.map { " · \($0)" } ?? ""))
                     .font(.system(size: 10, design: .monospaced)).foregroundStyle(OrkaTheme.muted)
                 if blocker.mozna {
-                    Button("ok, leć") { pending = "ok, leć" }.tint(OrkaTheme.accent)
+                    Button("ok, leć") { pending = "ok, leć" }.tint(OrkaTheme.accent).disabled(sending)
                     TextFieldLink(prompt: Text("Odpowiedź na bloker")) {
                         Label("Podyktuj odpowiedź…", systemImage: "mic.fill").font(.system(size: 13))
                     } onSubmit: { text in
                         let clean = text.trimmingCharacters(in: .whitespacesAndNewlines)
                         if !clean.isEmpty { pending = clean }
                     }
-                    OrkaSendBox(target: "bloker #\(blocker.nr)", pending: $pending) { text in
+                    .disabled(sending)
+                    OrkaSendBox(target: "bloker #\(blocker.nr) (\(blocker.sesja))", pending: $pending, sending: $sending) { text in
                         await model.answer(blocker: blocker.nr, text: text)
                     }
                 } else {

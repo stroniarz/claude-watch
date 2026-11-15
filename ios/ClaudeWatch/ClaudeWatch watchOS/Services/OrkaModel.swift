@@ -16,10 +16,10 @@ final class OrkaModel: ObservableObject {
         case answer(question: String, text: String, failed: Bool)
     }
 
-    /// Jedna wypowiedź w rozmowie z Orką-orkiestratorką.
-    struct Line: Identifiable, Equatable {
-        enum Who { case me, orka, info }
-        let id = UUID()
+    /// Jedna wypowiedź w rozmowie z Orką-orkiestratorką (trwała między uruchomieniami appki).
+    struct Line: Identifiable, Equatable, Codable {
+        enum Who: String, Codable { case me, orka, info }
+        var id = UUID()
         let who: Who
         let text: String
     }
@@ -35,7 +35,9 @@ final class OrkaModel: ObservableObject {
     @Published private(set) var loading = false
     @Published private(set) var error: String?
     @Published private(set) var talk: Talk = .idle
-    @Published private(set) var chat: [Line] = []
+    @Published private(set) var chat: [Line] = OrkaModel.loadChat()
+    /// Odpowiedzi Orki, które przyszły, gdy ekran rozmowy był zamknięty (do przeczytania po wejściu).
+    @Published private(set) var unheard: [String] = []
     @Published private(set) var chatStatus: ChatStatus = .idle
     @Published private(set) var speaking = false
     @Published private(set) var voiceNote: String?
@@ -45,18 +47,40 @@ final class OrkaModel: ObservableObject {
     private var observers: [NSObjectProtocol] = []
     private var askGeneration = 0
     private var chatGeneration = 0
-    /// Odpowiedzi Orki po tej chwili (epoch Maca ≈ zegarka; oba z NTP).
-    private var repliesSince: Double = 0
-    /// Głos, na który czekamy (id prośby do iPhone'a) i czy grać go od razu.
+    private var polling = false
+    /// Ekran rozmowy widoczny: tylko wtedy odpowiedź Orki gra od razu.
+    private var chatVisible = false
+    /// Kursor skrzynki zegarka: numer ostatniego odebranego wpisu (trwały).
+    private var cursor: Int? = UserDefaults.standard.object(forKey: OrkaModel.cursorKey) as? Int
+    /// Głos, na który czekamy (id prośby do iPhone'a) i tekst, którego dotyczy.
     private var awaitedAudio: String?
-    private var lastAudio: URL?
+    private var awaitedText: String?
+    private var lastAudio: (url: URL, text: String)?
+    /// Kolejka tekstów do przeczytania po bieżącej wypowiedzi.
+    private var speechQueue: [String] = []
+    private var freshPending = false
+
+    private static let cursorKey = "orka.chat.cursor"
+    private static let chatKey = "orka.chat.lines"
+
+    private static func loadChat() -> [Line] {
+        guard let data = UserDefaults.standard.data(forKey: chatKey),
+              let lines = try? JSONDecoder().decode([Line].self, from: data) else { return [] }
+        return lines
+    }
+
+    private func saveChat() {
+        let tail = Array(chat.suffix(30))
+        if let data = try? JSONEncoder().encode(tail) { UserDefaults.standard.set(data, forKey: Self.chatKey) }
+        if let cursor { UserDefaults.standard.set(cursor, forKey: Self.cursorKey) }
+    }
 
     /// Ile czekamy na odpowiedź Orki po ostatniej wiadomości (Orka bywa zajęta albo restartuje mostek).
     static let replyWindow: TimeInterval = 180
 
     init(service: RelayHandsfreeService = RelayHandsfreeService()) {
         self.service = service
-        player.onFinish = { [weak self] in Task { @MainActor in self?.speaking = false } }
+        player.onFinish = { [weak self] in Task { @MainActor in self?.speechFinished() } }
         observers.append(NotificationCenter.default.addObserver(forName: OrkaSync.didUpdate, object: nil, queue: .main) { [weak self] _ in
             Task { @MainActor in self?.snapshot = OrkaStore.load() }
         })
@@ -98,9 +122,18 @@ final class OrkaModel: ObservableObject {
         #if DEBUG
         if Self.preview { return }
         #endif
-        guard !loading else { return }
+        guard !loading else {
+            if fresh { freshPending = true }   // akcja potrzebuje świeżego stanu — dołóż po bieżącym odczycie
+            return
+        }
         loading = true
-        defer { loading = false }
+        defer {
+            loading = false
+            if freshPending {
+                freshPending = false
+                Task { await refresh(fresh: true) }
+            }
+        }
         switch await service.counters(fresh: fresh) {
         case .success(let counters) where counters.wiekS == nil:
             error = "Mac jeszcze zbiera stan panelu. Spróbuj za chwilę."
@@ -116,24 +149,28 @@ final class OrkaModel: ObservableObject {
 
     // MARK: - Rozmowa z Orką-orkiestratorką
 
-    /// Wiadomość wprost do sesji orkiestratora; potem czekamy na jej `speak` i czytamy go głosem voice-inbox.
+    /// Wiadomość wprost do sesji orkiestratora; jej odpowiedzi (skrzynka zegarka) czytamy głosem voice-inbox.
     func tellOrka(_ raw: String) {
         let text = raw.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !text.isEmpty else { return }
         chatGeneration += 1
         let generation = chatGeneration
         chat.append(Line(who: .me, text: text))
+        saveChat()
         chatStatus = .sending
         WKInterfaceDevice.current().play(.start)
-        if repliesSince == 0 { repliesSince = Date().timeIntervalSince1970 - 5 }
         Task {
+            // Kursor PRZED wysłaniem (pierwsze użycie): odpowiedź Orki będzie miała większy numer.
+            if cursor == nil, case .success(let start) = await service.orkaReplies(after: nil, wait: 0) {
+                cursor = start.ostatni
+            }
             let result = await service.action("orka/napisz", body: OrkaActions.tellOrka(text))
             guard generation == chatGeneration else { return }
             switch result {
             case .delivered:
                 WKInterfaceDevice.current().play(.click)
                 chatStatus = .waiting(since: Date())
-                await pollReplies(generation: generation)
+                await pollReplies()
             case .notSent(let why), .unknown(let why):
                 WKInterfaceDevice.current().play(.failure)
                 chatStatus = .failed(why)
@@ -141,53 +178,75 @@ final class OrkaModel: ObservableObject {
         }
     }
 
-    private func pollReplies(generation: Int) async {
+    /// Odpytuje skrzynkę do końca okna (Orka może odpowiedzieć w kilku częściach); jedna pętla naraz.
+    private func pollReplies() async {
+        if polling { return }
+        polling = true
+        defer { polling = false }
         let deadline = Date().addingTimeInterval(Self.replyWindow)
         var misses = 0
-        while generation == chatGeneration, Date() < deadline {
-            switch await service.orkaReplies(since: repliesSince, wait: 8) {
+        var answered = false
+        while Date() < deadline {
+            switch await service.orkaReplies(after: cursor ?? 0, wait: 8) {
             case .success(let replies):
                 misses = 0
-                guard generation == chatGeneration else { return }
                 guard !replies.odpowiedzi.isEmpty else { continue }
-                repliesSince = max(repliesSince, replies.odpowiedzi.map(\.ts).max() ?? repliesSince)
-                for reply in replies.odpowiedzi { chat.append(Line(who: .orka, text: reply.tekst)) }
-                WKInterfaceDevice.current().play(.notification)
-                chatStatus = .idle
-                speak(replies.odpowiedzi.map(\.tekst).joined(separator: " "))
-                return
+                receive(replies.odpowiedzi)
+                answered = true
+                if case .waiting = chatStatus { chatStatus = .idle }
             case .failure(let failure):
                 misses += 1
                 if misses >= 3 {
-                    chatStatus = .failed(failure.phrase)
+                    if !answered { chatStatus = .failed(failure.phrase) }
                     return
                 }
                 try? await Task.sleep(for: .seconds(2))
             }
         }
-        if generation == chatGeneration, case .waiting = chatStatus {
-            chat.append(Line(who: .info, text: "Orka jeszcze nie odpowiedziała. Odpowiedź usłyszysz w voice-inbox; tu zobaczysz ją po ponownym otwarciu rozmowy."))
+        if !answered, case .waiting = chatStatus {
+            chat.append(Line(who: .info, text: "Orka jeszcze nie odpowiedziała. Jej odpowiedź pokażę po ponownym otwarciu rozmowy."))
+            saveChat()
             chatStatus = .idle
         }
     }
 
-    /// Po ponownym wejściu w rozmowę: dociągnij to, co Orka powiedziała w międzyczasie.
-    func catchUpReplies() {
-        guard repliesSince > 0, chatStatus == .idle else { return }
-        chatGeneration += 1
-        let generation = chatGeneration
+    private func receive(_ replies: [OrkaReply]) {
+        cursor = max(cursor ?? 0, replies.map(\.nr).max() ?? 0)
+        for reply in replies { chat.append(Line(who: .orka, text: reply.tekst)) }
+        saveChat()
+        WKInterfaceDevice.current().play(.notification)
+        let text = replies.map(\.tekst).joined(separator: " ")
+        // Głos tylko na ekranie rozmowy; poza nim — do przeczytania po wejściu.
+        if chatVisible { enqueueSpeech(text) } else { unheard.append(text) }
+    }
+
+    /// Wejście w rozmowę: dociągnij odpowiedzi z czasu nieobecności (także po błędzie) i przeczytaj nieusłyszane.
+    func chatAppeared() {
+        chatVisible = true
+        for text in unheard { enqueueSpeech(text) }
+        unheard.removeAll()
+        if case .failed = chatStatus { chatStatus = .idle }
+        guard let cursor, !polling else { return }
         Task {
-            guard case .success(let replies) = await service.orkaReplies(since: repliesSince, wait: 0),
-                  generation == chatGeneration, !replies.odpowiedzi.isEmpty else { return }
-            repliesSince = max(repliesSince, replies.odpowiedzi.map(\.ts).max() ?? repliesSince)
-            for reply in replies.odpowiedzi { chat.append(Line(who: .orka, text: reply.tekst)) }
+            guard case .success(let replies) = await service.orkaReplies(after: cursor, wait: 0),
+                  !replies.odpowiedzi.isEmpty else { return }
+            receive(replies.odpowiedzi)
         }
     }
 
-    func leaveChat() {
-        chatGeneration += 1
-        if case .waiting = chatStatus { chatStatus = .idle }
+    func chatDisappeared() {
+        chatVisible = false
         stopSpeaking()
+    }
+
+    /// Ekran główny: sprawdź, czy Orka odpowiedziała, gdy appka była zamknięta.
+    func checkUnheard() {
+        guard let cursor, !polling else { return }
+        Task {
+            guard case .success(let replies) = await service.orkaReplies(after: cursor, wait: 0),
+                  !replies.odpowiedzi.isEmpty else { return }
+            receive(replies.odpowiedzi)
+        }
     }
 
     // MARK: - Szybkie pytanie (asystent panelu)
@@ -233,43 +292,57 @@ final class OrkaModel: ObservableObject {
 
     // MARK: - Głos voice-inbox
 
+    private func enqueueSpeech(_ text: String) {
+        if speaking { speechQueue.append(text) } else { speak(text) }
+    }
+
+    private func speechFinished() {
+        speaking = false
+        if !speechQueue.isEmpty { speak(speechQueue.removeFirst()) }
+    }
+
     /// Prosi iPhone'a o głos voice-inbox; plik przychodzi osobno i gra, jeśli to wciąż ta wypowiedź.
     func speak(_ text: String) {
         let id = UUID().uuidString
         awaitedAudio = id
+        awaitedText = text
         voiceNote = "Głos w drodze…"
         speaking = true
         Task {
             let queued = await service.requestSpeech(text, audioID: id)
             guard awaitedAudio == id else { return }
             if !queued {
-                speaking = false
+                awaitedAudio = nil
                 voiceNote = "Głos voice-inbox niedostępny — odpowiedź jest na ekranie."
+                speechFinished()
                 return
             }
             // Plik zwykle dochodzi w kilka sekund; po 25 s przestajemy czekać.
             try? await Task.sleep(for: .seconds(25))
             if awaitedAudio == id {
                 awaitedAudio = nil
-                speaking = false
                 voiceNote = "Głos nie dotarł — odpowiedź jest na ekranie."
+                speechFinished()
             }
         }
     }
 
     private func audioArrived(id: String?, url: URL?) {
-        guard let id, let url, id == awaitedAudio else { return }
+        guard let id, let url, id == awaitedAudio, let text = awaitedText else { return }
         awaitedAudio = nil
-        lastAudio = url
+        lastAudio = (url, text)
         voiceNote = nil
-        speaking = player.play(url)
-        if !speaking { voiceNote = "Nie udało się odtworzyć głosu." }
+        if !player.play(url) {
+            voiceNote = "Nie udało się odtworzyć głosu."
+            speechFinished()
+        }
     }
 
-    /// „Powtórz”: ostatni plik głosu, a gdy go nie ma — nowa synteza.
+    /// „Powtórz”: plik tej samej wypowiedzi, a gdy go nie ma (albo dotyczy innej) — nowa synteza.
     func replay(_ text: String) {
-        if let lastAudio, FileManager.default.fileExists(atPath: lastAudio.path) {
-            speaking = player.play(lastAudio)
+        stopSpeaking()
+        if let last = lastAudio, last.text == text, FileManager.default.fileExists(atPath: last.url.path) {
+            speaking = player.play(last.url)
         } else {
             speak(text)
         }
@@ -277,6 +350,7 @@ final class OrkaModel: ObservableObject {
 
     func stopSpeaking() {
         awaitedAudio = nil
+        speechQueue.removeAll()
         player.stop()
         speaking = false
         voiceNote = nil

@@ -229,6 +229,12 @@ extension WatchSessionManager: WCSessionDelegate {
     }
     #endif
 
+    #if os(iOS)
+    func session(_ session: WCSession, didFinish fileTransfer: WCSessionFileTransfer, error: Error?) {
+        OrkaAudio.transferFinished(fileTransfer.file.fileURL)
+    }
+    #endif
+
     // MARK: Application context
 
     func session(
