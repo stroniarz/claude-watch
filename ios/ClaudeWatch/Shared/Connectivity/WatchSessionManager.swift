@@ -221,6 +221,20 @@ extension WatchSessionManager: WCSessionDelegate {
         handleIncoming(dictionary: userInfo)
     }
 
+    // MARK: Files (STR-1463: głos voice-inbox z iPhone'a)
+
+    #if os(watchOS)
+    func session(_ session: WCSession, didReceive file: WCSessionFile) {
+        _ = OrkaAudio.receive(file)
+    }
+    #endif
+
+    #if os(iOS)
+    func session(_ session: WCSession, didFinish fileTransfer: WCSessionFileTransfer, error: Error?) {
+        OrkaAudio.transferFinished(fileTransfer.file.fileURL)
+    }
+    #endif
+
     // MARK: Application context
 
     func session(

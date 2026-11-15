@@ -15,6 +15,8 @@ struct PairingView: View {
     @State private var showError: Bool = false
     @State private var errorMessage: String = ""
     @State private var isConnecting: Bool = false
+    /// Ustawienia Stroniarz Voice / Orki (adres, token) muszą być dostępne bez parowania z mostkiem Claude.
+    @State private var showVoiceSettings: Bool = false
 
     // Discovered bridge addresses (LAN / Tailscale) the user can pick from.
     @State private var candidates: [BonjourDiscovery.DiscoveredService] = []
@@ -50,6 +52,18 @@ struct PairingView: View {
             .padding(.horizontal, 32)
         }
         .task { await loadCandidates() }
+        .overlay(alignment: .topTrailing) {
+            Button { showVoiceSettings = true } label: {
+                Label("Stroniarz Voice", systemImage: "gearshape")
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundStyle(Color.subtleText)
+            }
+            .padding(.top, 8)
+            .padding(.trailing, 20)
+        }
+        .sheet(isPresented: $showVoiceSettings) {
+            NavigationStack { VoiceSettingsView() }
+        }
     }
 
     // MARK: - Address picker

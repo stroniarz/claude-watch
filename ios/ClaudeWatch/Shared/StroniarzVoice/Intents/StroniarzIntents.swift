@@ -72,6 +72,31 @@ struct AskStroniarzIntent: AppIntent {
     }
 }
 
+#if os(iOS)
+/// STR-1463: „Powiedz Orce” — wiadomość wprost do Orki-orkiestratorki (sesja Claude), z zablokowanego iPhone'a
+/// i AirPodsów. Czeka do ~20 s na jej odpowiedź (skrzynka zegarka); później odpowiedź przyjdzie na zegarek.
+/// Klocek do osobistego skrótu: „Dyktuj tekst” (polski) → ta akcja → „Powiedz tekst”.
+struct TellOrkaIntent: AppIntent {
+    static let title: LocalizedStringResource = "Powiedz Orce"
+    static let description = IntentDescription(
+        "Wysyła wiadomość wprost do Orki (orkiestratorki sesji) i zwraca jej odpowiedź do przeczytania. Orka może przekazać sprawę konkretnej sesji.")
+    static let openAppWhenRun = false
+    static let authenticationPolicy: IntentAuthenticationPolicy = .alwaysAllowed
+
+    @Parameter(title: "Wiadomość", requestValueDialog: IntentDialog("Co przekazać Orce?"))
+    var text: String
+
+    static var parameterSummary: some ParameterSummary {
+        Summary("Powiedz Orce: \(\.$text)")
+    }
+
+    func perform() async throws -> some IntentResult & ReturnsValue<String> & ProvidesDialog {
+        let answer = await HandsfreeClient.fromSettings().tellOrkaAndWait(text)
+        return .result(value: answer, dialog: IntentDialog(stringLiteral: answer))
+    }
+}
+#endif
+
 /// "Test połączenia" from Shortcuts/Siri: /ping.
 struct PingStroniarzIntent: AppIntent {
     static let title: LocalizedStringResource = "Sprawdź połączenie ze Stroniarzem"
@@ -110,5 +135,17 @@ struct StroniarzShortcuts: AppShortcutsProvider {
             shortTitle: "Raport",
             systemImageName: "list.bullet.rectangle"
         )
+        #if os(iOS)
+        AppShortcut(
+            intent: TellOrkaIntent(),
+            phrases: [
+                "Powiedz Orce w \(.applicationName)",
+                "\(.applicationName) Orka",
+                "Tell Orka in \(.applicationName)",
+            ],
+            shortTitle: "Powiedz Orce",
+            systemImageName: "bubble.left.fill"
+        )
+        #endif
     }
 }

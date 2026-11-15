@@ -5,10 +5,35 @@ import Foundation
 /// Plik jest samodzielny: kompiluje się też w rozszerzeniu widgetów zegarka,
 /// które nie ma reszty modułu StroniarzVoice.
 struct OrkaCounters: Codable, Equatable, Sendable {
-    struct Waiting: Codable, Equatable, Sendable {
+    struct Waiting: Codable, Equatable, Sendable, Hashable {
         let nazwa: String
         let issue: String?
         let konto: String
+        /// Etap 2: id sesji i cel szybkiej odpowiedzi (`kanal`) albo powód jego braku.
+        let id: String?
+        let kanal: String?
+        let powod: String?
+
+        init(nazwa: String, issue: String?, konto: String, id: String? = nil, kanal: String? = nil, powod: String? = nil) {
+            self.nazwa = nazwa
+            self.issue = issue
+            self.konto = konto
+            self.id = id
+            self.kanal = kanal
+            self.powod = powod
+        }
+    }
+
+    struct Blocker: Codable, Equatable, Sendable, Hashable, Identifiable {
+        let nr: Int
+        let sesja: String
+        let issue: String?
+        let typ: String
+        let potrzebuje: String
+        let stan: String
+        /// false: sekret albo odpowiedź już w drodze — z zegarka nie odpowiadamy.
+        let mozna: Bool
+        var id: Int { nr }
     }
 
     struct Limit: Codable, Equatable, Sendable {
@@ -28,6 +53,7 @@ struct OrkaCounters: Codable, Equatable, Sendable {
     let limity: [String: Int]
     let limit: Limit?
     let czekajace: [Waiting]
+    let blokeryLista: [Blocker]
     let zdanie: String
     let bledy: Int
 
@@ -35,11 +61,12 @@ struct OrkaCounters: Codable, Equatable, Sendable {
         case czas, czeka, pracuje, blokery, ogony, limity, limit, czekajace, zdanie, bledy
         case wiekS = "wiek_s"
         case ogonyOtwarte = "ogony_otwarte"
+        case blokeryLista = "blokery_lista"
     }
 
     init(czas: String = "", wiekS: Int? = nil, czeka: Int = 0, pracuje: Int = 0, blokery: Int = 0,
          ogony: Int = 0, ogonyOtwarte: Int = 0, limity: [String: Int] = [:], limit: Limit? = nil,
-         czekajace: [Waiting] = [], zdanie: String = "", bledy: Int = 0) {
+         czekajace: [Waiting] = [], blokeryLista: [Blocker] = [], zdanie: String = "", bledy: Int = 0) {
         self.czas = czas
         self.wiekS = wiekS
         self.czeka = czeka
@@ -50,6 +77,7 @@ struct OrkaCounters: Codable, Equatable, Sendable {
         self.limity = limity
         self.limit = limit
         self.czekajace = czekajace
+        self.blokeryLista = blokeryLista
         self.zdanie = zdanie
         self.bledy = bledy
     }
@@ -67,6 +95,7 @@ struct OrkaCounters: Codable, Equatable, Sendable {
         limity = (try? c.decode([String: Int].self, forKey: .limity)) ?? [:]
         limit = try? c.decodeIfPresent(Limit.self, forKey: .limit)
         czekajace = (try? c.decode([Waiting].self, forKey: .czekajace)) ?? []
+        blokeryLista = (try? c.decode([Blocker].self, forKey: .blokeryLista)) ?? []
         zdanie = (try? c.decode(String.self, forKey: .zdanie)) ?? ""
         bledy = (try? c.decode(Int.self, forKey: .bledy)) ?? 0
     }

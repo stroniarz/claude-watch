@@ -4,7 +4,17 @@ import Foundation
 /// Na iPhonie przez HTTPS (`HandsfreeClient`), na zegarku przez iPhone'a (relay).
 protocol OrkaService: Sendable {
     func counters() async -> Result<OrkaCounters, HandsfreeFailure>
+    func counters(fresh: Bool) async -> Result<OrkaCounters, HandsfreeFailure>
     func askOrka(_ text: String) async -> HandsfreeOutcome
+    /// Etap 2: akcje panelu (`orka/napisz`, `pokieruj`, `bloker/odpowiedz`) i odpowiedzi Orki-orkiestratorki.
+    func action(_ path: String, body: [String: Any]) async -> OrkaActionResult
+    func orkaReplies(after: Int?, wait: Double) async -> Result<OrkaReplies, HandsfreeFailure>
+}
+
+extension OrkaService {
+    func counters(fresh: Bool) async -> Result<OrkaCounters, HandsfreeFailure> { await counters() }
+    func action(_ path: String, body: [String: Any]) async -> OrkaActionResult { .notSent("Akcja niedostępna.") }
+    func orkaReplies(after: Int?, wait: Double) async -> Result<OrkaReplies, HandsfreeFailure> { .failure(.server) }
 }
 
 enum OrkaPhrases {
@@ -20,8 +30,12 @@ extension HandsfreeClient: OrkaService {
     /// Orka (T2) to wywołanie modelu: serwer daje mu do 60 s, zegarek czeka krócej.
     static let orkaTimeout: TimeInterval = 28
 
-    func counters() async -> Result<OrkaCounters, HandsfreeFailure> {
-        switch await callJSON("panel/api/zegarek", method: "GET", body: nil, timeout: Self.countersTimeout) {
+    func counters() async -> Result<OrkaCounters, HandsfreeFailure> { await counters(fresh: false) }
+
+    /// `fresh`: przed akcją z zegarka — serwer czeka na świeży stan już od 60 s (akcje odmawiają > 2 min).
+    func counters(fresh: Bool) async -> Result<OrkaCounters, HandsfreeFailure> {
+        let query = fresh ? [URLQueryItem(name: "swiezy", value: "1")] : []
+        switch await callJSON("panel/api/zegarek", method: "GET", body: nil, timeout: Self.countersTimeout, query: query) {
         case .failure(let f, _):
             return .failure(f)
         case .success(let data):
@@ -62,9 +76,15 @@ extension HandsfreeClient: OrkaService {
         case failure(HandsfreeFailure, spoken: String)
     }
 
-    private func callJSON(_ path: String, method: String, body: Data?, timeout: TimeInterval) async -> JSONResult {
+    func callJSON(_ path: String, method: String, body: Data?, timeout: TimeInterval,
+                  query: [URLQueryItem] = []) async -> JSONResult {
         guard let baseURL, let token else { return .failure(.notConfigured, spoken: HandsfreeFailure.notConfigured.phrase) }
-        var request = URLRequest(url: baseURL.appendingPathComponent(path), timeoutInterval: timeout)
+        var url = baseURL.appendingPathComponent(path)
+        if !query.isEmpty, var parts = URLComponents(url: url, resolvingAgainstBaseURL: false) {
+            parts.queryItems = query
+            url = parts.url ?? url
+        }
+        var request = URLRequest(url: url, timeoutInterval: timeout)
         request.httpMethod = method
         request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
         request.setValue("application/json", forHTTPHeaderField: "Accept")
@@ -89,6 +109,10 @@ extension HandsfreeClient: OrkaService {
         if (200..<300).contains(status) { return .success(data) }
         let json = (try? JSONSerialization.jsonObject(with: data)) as? [String: Any]
         let message = (json?["blad"] as? String ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
+        // Odmowa walidacji (400/404/409/415…): zdanie serwera jest konkretne, nie zamieniamy go na ogólnik.
+        if (400..<500).contains(status), ![401, 403, 413, 429].contains(status), !message.isEmpty {
+            return .failure(.server, spoken: message)
+        }
         switch outcome(status: status, text: message) {
         case .failure(let f, let spoken): return .failure(f, spoken: spoken)
         case .answer: return .failure(.server, spoken: VoicePhrases.serverError)

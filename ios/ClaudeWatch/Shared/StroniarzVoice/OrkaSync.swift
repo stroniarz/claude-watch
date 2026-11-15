@@ -16,6 +16,8 @@ import WidgetKit
 /// który budzi appkę zegarka. Zegarek zapisuje je w App Group i przeładowuje widget.
 enum OrkaSync {
     static let refreshKey = "orkaRefresh"
+    /// iPhone → zegarek: kursor skrzynki sprzed wiadomości wysłanej przez Siri (odbiór odpowiedzi na zegarku).
+    static let cursorHintKey = "orkaCursorHint"
     static let countersKey = "orkaCounters"
     /// Nie częściej niż co 30 min prosimy telefon w tle: najwyżej 48/dobę przy budżecie
     /// komplikacji ok. 50/dobę (po jego wyczerpaniu iPhone wysyła zwykłe transferUserInfo).
@@ -31,6 +33,10 @@ enum OrkaSync {
         }
         #endif
         #if os(watchOS)
+        if let hint = userInfo[cursorHintKey] as? Int {
+            NotificationCenter.default.post(name: cursorHint, object: nil, userInfo: ["ostatni": hint])
+            return true
+        }
         if let data = userInfo[countersKey] as? Data {
             // Snapshot z datą danych wyliczoną na iPhonie: paczka mogła czekać w kolejce godzinami.
             if let snapshot = try? JSONDecoder().decode(OrkaSnapshot.self, from: data) {
@@ -77,8 +83,18 @@ enum OrkaSync {
     }
     #endif
 
+    #if os(iOS)
+    /// iPhone (Siri): powiedz zegarkowi, od którego wpisu czekać na odpowiedź Orki.
+    static func sendCursorHint(_ ostatni: Int) {
+        guard WCSession.isSupported(), WCSession.default.activationState == .activated,
+              WCSession.default.isPaired, WCSession.default.isWatchAppInstalled else { return }
+        WCSession.default.transferUserInfo([cursorHintKey: ostatni])
+    }
+    #endif
+
     #if os(watchOS)
     static let didUpdate = Notification.Name("OrkaSync.didUpdate")
+    static let cursorHint = Notification.Name("OrkaSync.cursorHint")
     private static let lastRequestKey = "orka.lastBackgroundRequest"
     /// store() woła ekran (MainActor), zadanie tła i delegat WCSession: odczyt–porównanie–zapis pod blokadą.
     private static let storeLock = NSLock()
