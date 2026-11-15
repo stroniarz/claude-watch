@@ -140,6 +140,10 @@ extension HandsfreeClient {
         }
         let result = await action("orka/napisz", body: OrkaActions.tellOrka(text, source: "siri"))
         guard result.delivered else { return result.text }
+        #if os(iOS)
+        // Odpowiedź może przyjść po 20 s — zegarek odbierze ją od tego miejsca.
+        OrkaSync.sendCursorHint(start.ostatni)
+        #endif
         let deadline = Date().addingTimeInterval(wait)
         while Date() < deadline {
             let left = deadline.timeIntervalSinceNow
