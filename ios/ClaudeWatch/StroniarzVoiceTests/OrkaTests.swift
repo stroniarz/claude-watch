@@ -151,6 +151,7 @@ final class OrkaTests: XCTestCase {
         XCTAssertEqual(reply["sesja_id"] as? String, "abcd1234")
         XCTAssertEqual(reply["konto"] as? String, "2")
         XCTAssertEqual(reply["kanal_oczekiwany"] as? String, "sesja k2:abcd1234")
+        XCTAssertEqual(reply["tylko_czekajaca"] as? Bool, true)
         XCTAssertEqual(reply["potwierdzam"] as? Bool, true)
         XCTAssertEqual(reply["id_akcji"] as? String, id.uuidString.lowercased())
         let blocker = OrkaActions.answer(blocker: 7, text: "ok, leć", id: id)

@@ -67,8 +67,9 @@ enum OrkaActions {
     }
 
     static func reply(to session: OrkaCounters.Waiting, text: String, id: UUID = UUID()) -> [String: Any] {
+        // tylko_czekajaca: serwer sprawdza na swoim aktualnym stanie, że sesja nadal czeka (szybka odpowiedź).
         ["sesja_id": session.id ?? "", "konto": session.konto, "kanal_oczekiwany": session.kanal ?? "",
-         "tekst": text, "potwierdzam": true, "id_akcji": id.uuidString.lowercased()]
+         "tekst": text, "tylko_czekajaca": true, "potwierdzam": true, "id_akcji": id.uuidString.lowercased()]
     }
 
     static func answer(blocker nr: Int, text: String, id: UUID = UUID()) -> [String: Any] {

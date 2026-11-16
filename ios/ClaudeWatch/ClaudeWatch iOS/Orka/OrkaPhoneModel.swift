@@ -119,7 +119,11 @@ final class OrkaPhoneModel: ObservableObject {
                 Task { await refresh(fresh: true) }
             }
         }
-        switch await client.counters(fresh: fresh) {
+        // Odpowiedź z Maca A po zmianie adresu na B jest odrzucana (review Codex r2, critical).
+        let requestedBase = HandsfreeSettings.baseURLString
+        let result = await client.counters(fresh: fresh)
+        guard requestedBase == HandsfreeSettings.baseURLString, requestedBase == dataBase else { return }
+        switch result {
         case .success(let counters):
             snapshot = OrkaSnapshot(counters: counters)
             if counters.wiekS != nil { lastRefreshOK = Date() }

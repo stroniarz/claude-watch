@@ -233,7 +233,7 @@ private struct OrkaPhoneReplyForm: View {
         Section("Odpowiedz") {
             if let recent {
                 VStack(alignment: .leading, spacing: 4) {
-                    Text("Wysłano „\(recent.text)” o \(recent.at.formatted(date: .omitted, time: .shortened))")
+                    Text("\(recent.result.delivered ? "Wysłano" : "Próba wysłania") „\(recent.text)” o \(recent.at.formatted(date: .omitted, time: .shortened))")
                         .font(.caption).foregroundStyle(.secondary)
                     Text(recent.result.text).foregroundStyle(recent.result.delivered ? Color.green : Color.orange)
                 }
