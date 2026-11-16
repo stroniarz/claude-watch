@@ -177,6 +177,19 @@ final class BridgeClient {
         try await authenticatedPostRaw(path: "command", body: body)
     }
 
+    // MARK: - Relay (phone proxies a watch command to the bridge)
+
+    /// Executes a `/command` POST on behalf of the watch in relay mode.
+    /// The watch serializes the exact body it would have posted directly and
+    /// sends it over WCSession; the phone replays it against the bridge.
+    func postCommandRelayed(bodyJSON: String) async throws {
+        guard let data = bodyJSON.data(using: .utf8),
+              let body = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else {
+            throw BridgeError.serverError("Malformed relayed command body")
+        }
+        try await authenticatedPostRaw(path: "command", body: body)
+    }
+
     // MARK: - Status
 
     /// Fetches the current bridge status.

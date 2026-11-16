@@ -5,7 +5,7 @@
 	<key>CFBundleDevelopmentRegion</key>
 	<string>$(DEVELOPMENT_LANGUAGE)</string>
 	<key>CFBundleDisplayName</key>
-	<string>Agent Watch</string>
+	<string>Stroniarz</string>
 	<key>CFBundleExecutable</key>
 	<string>$(EXECUTABLE_NAME)</string>
 	<key>CFBundleIdentifier</key>
@@ -26,8 +26,15 @@
 	</array>
 	<key>NSLocalNetworkUsageDescription</key>
 	<string>Agent Watch needs to find your Mac running the bridge server on your local network.</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>Mikrofon pozwala rozmawiać z Orką w panelu na Twoim Macu.</string>
+	<key>LSApplicationQueriesSchemes</key>
+	<array>
+		<string>tailscale</string>
+	</array>
 	<key>UIBackgroundModes</key>
 	<array>
+		<string>audio</string>
 		<string>fetch</string>
 		<string>remote-notification</string>
 	</array>

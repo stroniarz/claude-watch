@@ -13,6 +13,7 @@ struct SettingsView: View {
         NavigationStack {
             Form {
                 connectionSection
+                voiceSection
                 pairedMacSection
                 aboutSection
             }
@@ -52,6 +53,16 @@ struct SettingsView: View {
             Text("Connection")
         } footer: {
             Text("Auto discovers the bridge via Bonjour on your local network.")
+        }
+    }
+
+    private var voiceSection: some View {
+        Section {
+            NavigationLink("Stroniarz Voice") {
+                VoiceSettingsView()
+            }
+        } footer: {
+            Text("Rozmowa ze Stroniarzem przez Siri: adres Maca, token, test połączenia.")
         }
     }
 

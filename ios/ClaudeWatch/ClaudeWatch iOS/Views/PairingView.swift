@@ -15,6 +15,13 @@ struct PairingView: View {
     @State private var showError: Bool = false
     @State private var errorMessage: String = ""
     @State private var isConnecting: Bool = false
+    /// Ustawienia Stroniarz Voice / Orki (adres, token) muszą być dostępne bez parowania z mostkiem Claude.
+    @State private var showVoiceSettings: Bool = false
+
+    // Discovered bridge addresses (LAN / Tailscale) the user can pick from.
+    @State private var candidates: [BonjourDiscovery.DiscoveredService] = []
+    @State private var selectedHost: String? = nil
+    @State private var isDiscovering: Bool = false
 
     // MARK: - Body
 
@@ -28,6 +35,10 @@ struct PairingView: View {
                 mascotIcon
                 titleSection
 
+                if !showManualIP && !candidates.isEmpty {
+                    addressPickerSection
+                }
+
                 if showManualIP {
                     ipEntrySection
                 }
@@ -39,6 +50,79 @@ struct PairingView: View {
                 Spacer()
             }
             .padding(.horizontal, 32)
+        }
+        .task { await loadCandidates() }
+        .overlay(alignment: .topTrailing) {
+            Button { showVoiceSettings = true } label: {
+                Label("Stroniarz Voice", systemImage: "gearshape")
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundStyle(Color.subtleText)
+            }
+            .padding(.top, 8)
+            .padding(.trailing, 20)
+        }
+        .sheet(isPresented: $showVoiceSettings) {
+            NavigationStack { VoiceSettingsView() }
+        }
+    }
+
+    // MARK: - Address picker
+
+    private var addressPickerSection: some View {
+        VStack(spacing: 8) {
+            Text("Connect via")
+                .font(.system(size: 12, weight: .semibold))
+                .foregroundStyle(Color.subtleText)
+                .frame(maxWidth: .infinity, alignment: .leading)
+
+            ForEach(candidates) { svc in
+                Button {
+                    selectedHost = svc.host
+                    isCodeFocused = true
+                } label: {
+                    HStack(spacing: 10) {
+                        Image(systemName: svc.isTailscale ? "globe" : "wifi")
+                            .font(.system(size: 14))
+                            .foregroundStyle(svc.isTailscale ? Color.claudeAmber : Color.claudeOrange)
+                        VStack(alignment: .leading, spacing: 1) {
+                            Text(svc.host)
+                                .font(.system(size: 15, weight: .semibold, design: .monospaced))
+                                .foregroundStyle(.white)
+                            Text(svc.isTailscale ? "Tailscale — works anywhere" : "Local network")
+                                .font(.system(size: 11))
+                                .foregroundStyle(Color.subtleText)
+                        }
+                        Spacer()
+                        if selectedHost == svc.host {
+                            Image(systemName: "checkmark.circle.fill")
+                                .foregroundStyle(Color.claudeOrange)
+                        }
+                    }
+                    .padding(.horizontal, 14)
+                    .padding(.vertical, 10)
+                    .background(Color.cardBackground)
+                    .clipShape(RoundedRectangle(cornerRadius: 10))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 10)
+                            .stroke(selectedHost == svc.host ? Color.claudeOrange : Color.fieldBorder,
+                                    lineWidth: selectedHost == svc.host ? 2 : 1)
+                    )
+                }
+                .buttonStyle(.plain)
+            }
+        }
+    }
+
+    private func loadCandidates() async {
+        guard candidates.isEmpty, !showManualIP else { return }
+        isDiscovering = true
+        defer { isDiscovering = false }
+        if let found = try? await relayService.discoverCandidates(), !found.isEmpty {
+            await MainActor.run {
+                candidates = found
+                // Pre-select Tailscale (works anywhere); otherwise the first address.
+                selectedHost = found.first(where: { $0.isTailscale })?.host ?? found.first?.host
+            }
         }
     }
 
@@ -54,9 +138,7 @@ struct PairingView: View {
                 .font(.system(size: 28, weight: .bold))
                 .foregroundStyle(Color.claudeOrange)
 
-            Text(showManualIP
-                 ? "Enter your Mac's IP and the pairing code"
-                 : "Enter the pairing code from your Mac")
+            Text(subtitleText)
                 .font(.system(size: 15))
                 .foregroundStyle(Color.subtleText)
                 .multilineTextAlignment(.center)
@@ -169,6 +251,12 @@ struct PairingView: View {
 
     // MARK: - Logic
 
+    private var subtitleText: String {
+        if showManualIP { return "Enter your Mac's IP and the pairing code" }
+        if !candidates.isEmpty { return "Pick an address, then enter the code from your Mac" }
+        return "Enter the pairing code from your Mac"
+    }
+
     private func digitAt(_ index: Int) -> Character? {
         guard index < code.count else { return nil }
         return code[code.index(code.startIndex, offsetBy: index)]
@@ -208,6 +296,9 @@ struct PairingView: View {
                         return
                     }
                     try await relayService.pairWithIP(ip, code: code)
+                } else if let host = selectedHost {
+                    // Pair to the address the user picked (LAN or Tailscale).
+                    try await relayService.pairWithIP(host, code: code)
                 } else {
                     try await relayService.pair(code: code)
                 }

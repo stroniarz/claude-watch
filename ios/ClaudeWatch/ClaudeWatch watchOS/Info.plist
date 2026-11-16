@@ -5,7 +5,7 @@
 	<key>CFBundleDevelopmentRegion</key>
 	<string>$(DEVELOPMENT_LANGUAGE)</string>
 	<key>CFBundleDisplayName</key>
-	<string>Agent Watch</string>
+	<string>Stroniarz</string>
 	<key>CFBundleExecutable</key>
 	<string>$(EXECUTABLE_NAME)</string>
 	<key>CFBundleIdentifier</key>
@@ -21,12 +21,23 @@
 	<key>CFBundleVersion</key>
 	<string>1</string>
 	<key>NSMicrophoneUsageDescription</key>
-	<string>Agent Watch needs microphone access to transcribe your voice commands.</string>
+	<string>Orka i Agent Watch korzystają z mikrofonu, żeby przyjąć Twoje pytanie lub polecenie.</string>
 	<key>NSSpeechRecognitionUsageDescription</key>
-	<string>Agent Watch uses speech recognition to convert your voice commands to text.</string>
+	<string>Dyktowane pytania i polecenia są zamieniane na tekst.</string>
 	<key>WKApplication</key>
 	<true/>
 	<key>WKCompanionAppBundleIdentifier</key>
-	<string>com.shobhit.claudewatch</string>
+	<string>pl.stroniarz.claudewatch</string>
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleURLName</key>
+			<string>pl.stroniarz.claudewatch.orka</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>stroniarz</string>
+			</array>
+		</dict>
+	</array>
 </dict>
 </plist>

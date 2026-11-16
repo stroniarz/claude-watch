@@ -62,7 +62,7 @@ if (CODEX_BIN) {
 
 const PORT_RANGE_START = 7860;
 const PORT_RANGE_END = 7869;
-const PAIRING_CODE_TTL_MS = 5 * 60 * 1000;
+const PAIRING_CODE_TTL_MS = 15 * 60 * 1000;
 const RATE_LIMIT_WINDOW_MS = 5 * 60 * 1000;
 const RATE_LIMIT_MAX_ATTEMPTS = 5;
 const SSE_HEARTBEAT_INTERVAL_MS = 10_000;
@@ -73,13 +73,45 @@ const CODEX_SESSION_BOOTSTRAP_LOOKBACK_MS = 30 * 60 * 1000;
 const CODEX_SESSION_SCAN_LIMIT = 25;
 const CODEX_SESSION_ROOT = path.join(os.homedir(), ".codex", "sessions");
 const CODEX_LOG_FILE = path.join(os.homedir(), ".codex", "log", "codex-tui.log");
-const BRIDGE_ID = crypto.randomUUID();
+
+// Persistent pairing: keep bridgeId + sessionToken across restarts so paired
+// devices (watch/phone) don't have to re-enter a code every time the bridge
+// is restarted.
+const STATE_DIR = path.join(os.homedir(), ".claude-watch");
+const STATE_FILE = path.join(STATE_DIR, "bridge-state.json");
+
+function loadPersistedState() {
+  try {
+    const raw = fs.readFileSync(STATE_FILE, "utf-8");
+    const parsed = JSON.parse(raw);
+    if (parsed && typeof parsed.bridgeId === "string" && typeof parsed.sessionToken === "string") {
+      return parsed;
+    }
+  } catch { /* no state yet, or unreadable — start fresh */ }
+  return null;
+}
+
+function savePersistedState() {
+  try {
+    fs.mkdirSync(STATE_DIR, { recursive: true });
+    fs.writeFileSync(
+      STATE_FILE,
+      JSON.stringify({ bridgeId: BRIDGE_ID, sessionToken, pairedAt: Date.now() }, null, 2),
+      { mode: 0o600 }
+    );
+  } catch (err) {
+    log("warn", `Could not persist bridge state: ${err.message}`);
+  }
+}
+
+const persistedState = loadPersistedState();
+const BRIDGE_ID = persistedState?.bridgeId || crypto.randomUUID();
 
 // ---------------------------------------------------------------------------
 // State
 // ---------------------------------------------------------------------------
 
-let sessionToken = null;
+let sessionToken = persistedState?.sessionToken || null;
 let pairingCode = null;
 let pairingCodeExpiresAt = 0;
 
@@ -88,7 +120,8 @@ let rateLimitAttempts = 0;
 let rateLimitWindowStart = Date.now();
 
 // Bridge-level state: "idle" | "connected"
-let bridgeState = "idle";
+// Restored token means a device is already paired — start "connected".
+let bridgeState = sessionToken ? "connected" : "idle";
 
 // Multi-session: each entry is a session slot
 // { id, agent, cwd, folderName, ptyProcess, state, createdAt }
@@ -132,13 +165,14 @@ function generatePairingCode() {
   const code = crypto.randomInt(0, 1_000_000).toString().padStart(6, "0");
   pairingCode = code;
   pairingCodeExpiresAt = Date.now() + PAIRING_CODE_TTL_MS;
-  log("info", `Pairing code generated: ${code} (expires in 5 minutes)`);
+  log("info", `Pairing code generated: ${code} (expires in 15 minutes)`);
   return code;
 }
 
 function generateSessionToken() {
   const token = crypto.randomBytes(32).toString("hex");
   sessionToken = token;
+  savePersistedState();
   return token;
 }
 
@@ -165,6 +199,27 @@ function requireAuth(req) {
   if (!auth || !auth.startsWith("Bearer ")) return false;
   const token = auth.slice(7);
   return token === sessionToken && sessionToken !== null;
+}
+
+/// True for Tailscale's CGNAT range 100.64.0.0/10 (100.64.x - 100.127.x).
+function isTailscaleAddress(ip) {
+  const m = ip.match(/^100\.(\d+)\./);
+  return m ? Number(m[1]) >= 64 && Number(m[1]) <= 127 : false;
+}
+
+/// All non-internal IPv4 addresses, Tailscale first (it works from anywhere),
+/// each tagged so the app can label the pick-list.
+function listCandidateAddresses() {
+  const out = [];
+  for (const addrs of Object.values(os.networkInterfaces())) {
+    for (const addr of addrs || []) {
+      if (addr.family === "IPv4" && !addr.internal) {
+        out.push({ address: addr.address, kind: isTailscaleAddress(addr.address) ? "tailscale" : "lan" });
+      }
+    }
+  }
+  out.sort((a, b) => (a.kind === "tailscale" ? -1 : 1) - (b.kind === "tailscale" ? -1 : 1));
+  return out;
 }
 
 function jsonResponse(res, status, body) {
@@ -983,6 +1038,26 @@ async function handlePair(req, res) {
   });
 }
 
+// Forget the current pairing: invalidate the saved token and issue a fresh
+// code so a new (or re-installed) device can pair. Requires the current token
+// so a random LAN client can't deauth you.
+async function handlePairReset(req, res) {
+  if (req.method !== "POST") {
+    return jsonResponse(res, 405, { error: "Method not allowed" });
+  }
+  if (!requireAuth(req)) {
+    return jsonResponse(res, 401, { error: "Unauthorized" });
+  }
+
+  sessionToken = null;
+  bridgeState = "idle";
+  try { fs.rmSync(STATE_FILE, { force: true }); } catch { /* ignore */ }
+
+  const code = generatePairingCode();
+  log("info", "Pairing reset — saved token cleared, new code issued");
+  return jsonResponse(res, 200, { ok: true, pairingCode: code });
+}
+
 async function handleCommand(req, res) {
   if (req.method !== "POST") {
     return jsonResponse(res, 405, { error: "Method not allowed" });
@@ -1185,8 +1260,13 @@ function handleEvents(req, res) {
   log("info", `SSE client connected (total: ${sseClients.size})`);
 
   // Send current sessions state so late-connecting clients see existing sessions
+  // (only sessions with hook activity in the last 30 min — external sessions
+  // never transition out of "running", so without this filter stale sessions
+  // accumulate forever and flood new clients)
+  const SNAPSHOT_ACTIVITY_WINDOW_MS = 30 * 60 * 1000;
   for (const [sid, slot] of sessions) {
-    if (slot.state === "running") {
+    const lastSeen = slot.lastActivity || slot.createdAt;
+    if (slot.state === "running" && Date.now() - lastSeen < SNAPSHOT_ACTIVITY_WINDOW_MS) {
       const syncEntry = formatSseMessage({
         id: sseEventId++,
         event: "session",
@@ -1238,19 +1318,36 @@ function resolveHookSession(body) {
   const cwd = body.session_cwd || body.cwd || null;
   const source = body.source || "claude";
 
-  // Try exact cwd match first
-  const match = findSessionByCwd(cwd);
-  if (match) return match.id;
+  // Prefer the agent's own session_id — it's stable for the whole session,
+  // unlike cwd, which follows the shell and fragments one session into many
+  if (body.session_id && sessions.has(body.session_id)) {
+    const slot = sessions.get(body.session_id);
+    slot.lastActivity = Date.now();
+    return slot.id;
+  }
 
-  // Fallback: if exactly one running session, use it
-  const active = findMostRecentActiveSession();
-  if (active) return active.id;
+  // Fuzzy fallbacks only when the hook carries no session_id (e.g. codex
+  // wrapper) — with a session_id present we want a dedicated slot instead
+  // of hijacking another session's
+  if (!body.session_id) {
+    const match = findSessionByCwd(cwd);
+    if (match) {
+      match.lastActivity = Date.now();
+      return match.id;
+    }
+
+    const active = findMostRecentActiveSession();
+    if (active) {
+      active.lastActivity = Date.now();
+      return active.id;
+    }
+  }
 
   // No session exists — auto-create one for this external Claude/Codex instance
   const agent = source === "codex" ? "codex" : "claude";
   const resolvedCwd = cwd || process.argv[2] || process.env.HOME || process.cwd();
   const folderName = path.basename(resolvedCwd) || resolvedCwd;
-  const sessionId = crypto.randomUUID();
+  const sessionId = body.session_id || crypto.randomUUID();
 
   const slot = {
     id: sessionId,
@@ -1260,6 +1357,7 @@ function resolveHookSession(body) {
     ptyProcess: null, // External process — no PTY owned by bridge
     state: "running",
     createdAt: Date.now(),
+    lastActivity: Date.now(),
   };
   sessions.set(sessionId, slot);
 
@@ -1400,6 +1498,8 @@ function handleStatus(_req, res) {
     // Backward compat: expose the most recent active session's info
     hasPty: findMostRecentActiveSession() !== null,
     activeAgent: mostRecentRunningSession?.agent || null,
+    // All reachable addresses, so an already-connected client can refresh its list.
+    addresses: listCandidateAddresses(),
   });
 }
 
@@ -1409,6 +1509,7 @@ function handleStatus(_req, res) {
 
 const routes = {
   "POST /pair": handlePair,
+  "POST /pair-reset": handlePairReset,
   "POST /command": handleCommand,
   "GET /events": handleEvents,
   "POST /hooks/tool-output": handleHookToolOutput,
@@ -1478,6 +1579,11 @@ async function startServer() {
 
   const code = generatePairingCode();
 
+  // All reachable IPv4 addresses (LAN + Tailscale), advertised so the app can
+  // offer them as a pick-list instead of making the user type one by hand.
+  const candidateAddresses = listCandidateAddresses();
+  const addressesTxt = candidateAddresses.map((a) => a.address).join(",");
+
   // Bonjour
   bonjourInstance = new Bonjour();
   bonjourService = bonjourInstance.publish({
@@ -1490,6 +1596,7 @@ async function startServer() {
       bridgeId: BRIDGE_ID,
       sessionId: BRIDGE_ID, // backward compat
       machineName: os.hostname(),
+      addresses: addressesTxt,
     },
   });
 
@@ -1501,29 +1608,30 @@ async function startServer() {
   if (CODEX_BIN) agents.push("Codex");
   log("info", `Bridge ready. Available agents: ${agents.join(", ") || "none"}. Sessions spawn on demand.`);
 
-  // Get LAN IP
-  const interfaces = os.networkInterfaces();
-  let lanIP = "127.0.0.1";
-  for (const [, addrs] of Object.entries(interfaces)) {
-    for (const addr of addrs) {
-      if (addr.family === "IPv4" && !addr.internal) {
-        lanIP = addr.address;
-        break;
-      }
-    }
-    if (lanIP !== "127.0.0.1") break;
-  }
+  const lanIP = candidateAddresses.find((a) => a.kind === "lan")?.address || "127.0.0.1";
 
   const agentLine = agents.length ? agents.join(" + ") : "none";
+  // Always show the code — a restored token only means the LAST paired device
+  // stays valid; pairing a new device still needs the code (and replaces it).
   console.log("");
   console.log("╔═══════════════════════════════════════╗");
   console.log("║        AGENT WATCH BRIDGE             ║");
   console.log("╠═══════════════════════════════════════╣");
-  console.log(`║  Pairing Code:  ${code}                ║`);
+  console.log(`║  Pairing Code:  ${code.padEnd(20)}║`);
   console.log(`║  IP Address:    ${lanIP.padEnd(20)}║`);
   console.log(`║  Port:          ${String(boundPort).padEnd(20)}║`);
   console.log(`║  Agents:        ${agentLine.padEnd(20)}║`);
   console.log("╚═══════════════════════════════════════╝");
+  if (candidateAddresses.length) {
+    console.log("  Addresses advertised to the app (pick in Agent Watch):");
+    for (const a of candidateAddresses) {
+      console.log(`    • ${a.address}${a.kind === "tailscale" ? "  (Tailscale — works anywhere)" : "  (LAN)"}`);
+    }
+  }
+  if (sessionToken) {
+    console.log("  A saved pairing was restored (last device stays connected).");
+    console.log("  Entering the code above pairs a new device and replaces it.");
+  }
   console.log("");
 
   // --- Graceful shutdown ---

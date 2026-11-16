@@ -23,6 +23,10 @@ final class NotificationService {
     // MARK: - Authorization
 
     private func requestAuthorization() {
+        #if DEBUG
+        // Zrzuty podglądu w symulatorze: bez systemowego okna zgody zasłaniającego ekran.
+        if ProcessInfo.processInfo.environment["ORKA_DEBUG_TOKEN_FILE"] != nil { return }
+        #endif
         let center = UNUserNotificationCenter.current()
         center.requestAuthorization(options: [.alert, .sound, .badge]) { granted, error in
             if let error {

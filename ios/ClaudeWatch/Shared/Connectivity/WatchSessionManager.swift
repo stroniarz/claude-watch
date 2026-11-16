@@ -24,6 +24,10 @@ final class WatchSessionManager: NSObject, ObservableObject {
     /// Called when a `WatchMessage` is received from the counterpart.
     var onMessageReceived: ((WatchMessage) -> Void)?
 
+    /// Called for Stroniarz Voice relay requests (watch → iPhone); the reply
+    /// carries the handsfree outcome. See `VoiceRelay`.
+    var onVoiceRequest: (([String: Any], @escaping @Sendable ([String: Any]) -> Void) -> Void)?
+
     /// Called when the application context is updated by the counterpart.
     var onApplicationContextReceived: (([String: Any]) -> Void)?
 
@@ -187,6 +191,16 @@ extension WatchSessionManager: WCSessionDelegate {
         didReceiveMessage message: [String: Any],
         replyHandler: @escaping ([String: Any]) -> Void
     ) {
+        if let request = message[VoiceRelay.requestKey] as? [String: Any] {
+            if let onVoiceRequest {
+                // WCSession's reply handler may be called from any thread.
+                let reply = UncheckedReply(replyHandler)
+                onVoiceRequest(request) { reply.call($0) }
+            } else {
+                replyHandler(VoiceRelay.encode(HandsfreeOutcome.failure(.server)))
+            }
+            return
+        }
         handleIncoming(dictionary: message)
         replyHandler(["status": "received"])
     }
@@ -197,8 +211,29 @@ extension WatchSessionManager: WCSessionDelegate {
         _ session: WCSession,
         didReceiveUserInfo userInfo: [String: Any] = [:]
     ) {
+        if OrkaSync.handleUserInfo(userInfo) { return }
+        #if os(watchOS)
+        if let config = userInfo[VoiceRelay.configKey] as? [String: Any] {
+            VoiceRelay.applyConfig(config)
+            return
+        }
+        #endif
         handleIncoming(dictionary: userInfo)
     }
+
+    // MARK: Files (STR-1463: głos voice-inbox z iPhone'a)
+
+    #if os(watchOS)
+    func session(_ session: WCSession, didReceive file: WCSessionFile) {
+        _ = OrkaAudio.receive(file)
+    }
+    #endif
+
+    #if os(iOS)
+    func session(_ session: WCSession, didFinish fileTransfer: WCSessionFileTransfer, error: Error?) {
+        OrkaAudio.transferFinished(fileTransfer.file.fileURL)
+    }
+    #endif
 
     // MARK: Application context
 
@@ -228,4 +263,10 @@ extension WatchSessionManager: WCSessionDelegate {
             print("[WatchSessionManager] Failed to decode incoming message: \(error)")
         }
     }
+}
+
+/// Lets the (thread-safe, but unannotated) WCSession reply handler cross into a Task.
+private struct UncheckedReply: @unchecked Sendable {
+    let call: ([String: Any]) -> Void
+    init(_ call: @escaping ([String: Any]) -> Void) { self.call = call }
 }

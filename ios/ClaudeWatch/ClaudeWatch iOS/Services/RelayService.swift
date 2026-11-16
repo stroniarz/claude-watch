@@ -111,6 +111,12 @@ final class RelayService: ObservableObject {
         updateWatchState()
     }
 
+    /// Discovers the bridge and returns all of its reachable addresses so the
+    /// user can pick one (LAN / Tailscale) instead of typing it by hand.
+    func discoverCandidates() async throws -> [BonjourDiscovery.DiscoveredService] {
+        try await discovery.discoverCandidates()
+    }
+
     /// Pairs using a manual IP address (fallback when Bonjour fails on real devices).
     func pairWithIP(_ ip: String, code: String) async throws {
         print("[RelayService] Manual IP pair: \(ip), code: \(code)")
@@ -212,6 +218,11 @@ final class RelayService: ObservableObject {
     private func handleBridgeEvent(_ event: SSEClient.SSEEvent) {
         guard let eventType = event.event else { return }
         let data = event.data
+
+        // Relay the raw event to the watch so it can render via its own SSE parser.
+        // This is what makes remote (Tailscale) control work: the phone is the only
+        // thing that talks to the bridge; the watch just mirrors it over WCSession.
+        relayRawEventToWatch(eventType, data)
 
         switch eventType {
         case "pty-output":
@@ -632,6 +643,48 @@ final class RelayService: ObservableObject {
                     )
                 }
                 UserDefaults.standard.removeObject(forKey: key)
+            }
+
+        case .bridgeRequest(let req):
+            handleBridgeRequest(req)
+
+        default:
+            break
+        }
+    }
+
+    // MARK: - Relay (phone as proxy for the watch)
+
+    /// Forwards a raw bridge SSE event to the watch over WCSession. Payloads are
+    /// capped because WCSession messages are size-limited; the watch only needs
+    /// enough to render a line, and approvals (the critical path) are small.
+    private func relayRawEventToWatch(_ event: String, _ data: String) {
+        let capped = data.count > 4000 ? String(data.prefix(4000)) : data
+        sessionManager.send(.bridgeEvent(WatchMessage.BridgeEventRelay(event: event, data: capped)))
+    }
+
+    /// Handles an action the watch wants run against the bridge.
+    private func handleBridgeRequest(_ req: WatchMessage.BridgeRequestRelay) {
+        switch req.kind {
+        case "command":
+            guard let bodyJSON = req.bodyJSON else { return }
+            Task { try? await bridgeClient.postCommandRelayed(bodyJSON: bodyJSON) }
+
+        case "sync":
+            // The watch just entered relay mode — replay current sessions so it
+            // shows what's already running (the bridge only snapshots to the phone).
+            for s in sessions {
+                let payload: [String: Any] = [
+                    "state": "running",
+                    "agent": s.agent.rawValue,
+                    "cwd": s.cwd,
+                    "folderName": s.folderName,
+                    "sessionId": s.id,
+                ]
+                if let d = try? JSONSerialization.data(withJSONObject: payload),
+                   let str = String(data: d, encoding: .utf8) {
+                    sessionManager.send(.bridgeEvent(WatchMessage.BridgeEventRelay(event: "session", data: str)))
+                }
             }
 
         default:
