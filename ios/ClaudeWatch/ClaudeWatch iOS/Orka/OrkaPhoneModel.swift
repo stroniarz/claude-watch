@@ -33,6 +33,9 @@ final class OrkaPhoneModel: ObservableObject {
     private var pollID = UUID()
     private var speechTask: Task<Void, Never>?
     private var speechQueue: [String] = []
+    /// Ostatnia wysyłka do Orki i ostatnia odebrana odpowiedź — status „czekam” dotyczy ostatniej wiadomości.
+    private var lastSentAt = Date.distantPast
+    private var lastReplyAt = Date.distantPast
     private let player = OrkaPhonePlayer()
 
     init() {
@@ -185,10 +188,12 @@ final class OrkaPhoneModel: ObservableObject {
         switch result {
         case .delivered:
             chatStatus = "Wiadomość dostarczona. Czekam na odpowiedź Orki…"
+            lastSentAt = Date()
             conversation.waitingUntil = Date().addingTimeInterval(OrkaPhoneConversation.replyWindow)
         case .unknown:
             // Mogło dojść: sprawdzaj skrzynkę, ale nigdy samoczynnie nie wysyłaj ponownie.
             chatStatus = result.text
+            lastSentAt = Date()
             conversation.waitingUntil = Date().addingTimeInterval(OrkaPhoneConversation.replyWindow)
         case .notSent: chatStatus = result.text
         }
@@ -254,7 +259,7 @@ final class OrkaPhoneModel: ObservableObject {
                 do { try await Task.sleep(for: .milliseconds(100)) } catch { return }
             }
             var failures = 0
-            var receivedReply = false
+
             while !Task.isCancelled, self.visible,
                   let deadline = self.conversation.waitingUntil, deadline > Date() {
                 let result = await self.client.orkaReplies(after: self.conversation.cursor,
@@ -263,7 +268,7 @@ final class OrkaPhoneModel: ObservableObject {
                 switch result {
                 case .success(let replies):
                     failures = 0
-                    if self.receive(replies) { receivedReply = true }
+                    if self.receive(replies) { self.lastReplyAt = Date() }
                 case .failure:
                     failures += 1
                     if failures >= 3 {
@@ -277,7 +282,8 @@ final class OrkaPhoneModel: ObservableObject {
             guard !Task.isCancelled else { return }
             self.conversation.waitingUntil = nil
             self.saveChat()
-            if !receivedReply {
+            // Status dotyczy ostatniej wiadomości: odpowiedź na wcześniejszą nie wystarcza (review Codex r4).
+            if self.lastReplyAt < self.lastSentAt {
                 self.chatStatus = "Orka jeszcze nie odpowiedziała. Jej odpowiedź pojawi się po odświeżeniu albo po powrocie do rozmowy."
             }
         }
