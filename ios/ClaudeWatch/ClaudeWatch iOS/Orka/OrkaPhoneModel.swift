@@ -84,6 +84,8 @@ final class OrkaPhoneModel: ObservableObject {
         guard dataBase != current else { return }
         if dataBase != nil {
             snapshot = nil
+            lastResults.removeAll()
+            lastRefreshOK = nil
             conversation.cursor = nil
             UserDefaults.standard.removeObject(forKey: Self.snapshotKey)
             saveChat()
@@ -146,6 +148,7 @@ final class OrkaPhoneModel: ObservableObject {
 
     /// Synchronicznie, przed startem zadania: podwójne dotknięcie „Wyślij” nie wyśle dwa razy.
     func markInFlight(_ action: OrkaPhoneAction) { inFlight.insert(action.targetKey) }
+    func clearInFlight(_ action: OrkaPhoneAction) { inFlight.remove(action.targetKey) }
 
     /// Wynik ostatniej akcji do tego celu z ostatnich 15 minut.
     func recentResult(for target: OrkaPhoneAction.Target) -> (text: String, result: OrkaActionResult, at: Date)? {

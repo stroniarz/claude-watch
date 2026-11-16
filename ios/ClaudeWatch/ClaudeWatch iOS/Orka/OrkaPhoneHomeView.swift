@@ -132,6 +132,13 @@ struct OrkaPhoneSessionView: View {
             } else if !checked {
                 Section { ProgressView("Sprawdzam, czy sesja nadal czeka…") }
             } else if !stillWaiting {
+                if let recent = model.recentResult(for: .session(session)) {
+                    Section("Ostatnia wysyłka") {
+                        Text("„\(recent.text)” o \(recent.at.formatted(date: .omitted, time: .shortened))")
+                            .font(.caption).foregroundStyle(.secondary)
+                        Text(recent.result.text).foregroundStyle(recent.result.delivered ? Color.green : Color.orange)
+                    }
+                }
                 Section {
                     Label("Ta sesja już nie czeka na Ciebie — szybkie odpowiedzi są wyłączone.", systemImage: "checkmark.circle")
                     Text("Jeśli chcesz coś jej przekazać, napisz do Orki.").foregroundStyle(.secondary)
@@ -162,6 +169,12 @@ struct OrkaPhoneSessionView: View {
 struct OrkaPhoneBlockerView: View {
     @ObservedObject var model: OrkaPhoneModel
     let blocker: OrkaCounters.Blocker
+    @State private var checked = false
+    @State private var refreshFailed = false
+
+    private var stillOpen: Bool {
+        model.snapshot?.counters.blokeryLista.contains { $0.nr == blocker.nr && $0.mozna } ?? false
+    }
 
     var body: some View {
         Form {
@@ -172,15 +185,33 @@ struct OrkaPhoneBlockerView: View {
             }
             if blocker.typ == "sekret" {
                 Section { Label("Odpowiedz na Macu — sekretów nie podawaj w telefonie.", systemImage: "lock") }
-            } else if blocker.mozna {
+            } else if refreshFailed {
+                Section {
+                    Label("Nie udało się sprawdzić stanu blokera — odpowiedź z telefonu wstrzymana.",
+                          systemImage: "exclamationmark.triangle").foregroundStyle(.orange)
+                    Button("Sprawdź ponownie") { Task { await recheck() } }
+                }
+            } else if !checked {
+                Section { ProgressView("Sprawdzam, czy bloker jest nadal otwarty…") }
+            } else if blocker.mozna, stillOpen {
                 OrkaPhoneReplyForm(model: model, target: .blocker(blocker), quickReplies: ["ok, leć"],
-                                   stillValid: { model.snapshot?.counters.blokeryLista.contains { $0.nr == blocker.nr && $0.mozna } ?? false })
+                                   stillValid: { stillOpen })
+            } else if blocker.mozna {
+                Section { Text("Ten bloker jest już zamknięty albo odpowiedź jest w drodze.") }
             } else {
                 Section { Text("Odpowiedź na ten bloker jest już w drodze. Sprawdź stan na Macu.") }
             }
         }
         .navigationTitle("Bloker")
-        .task { _ = await model.refreshForAction() }
+        .task { await recheck() }
+    }
+
+    private func recheck() async {
+        refreshFailed = false
+        checked = false
+        let ok = await model.refreshForAction()
+        refreshFailed = !ok
+        checked = ok
     }
 }
 
@@ -229,13 +260,24 @@ private struct OrkaPhoneReplyForm: View {
                             // Blokada ustawia się synchronicznie, przed uruchomieniem żądania.
                             guard !sending else { return }
                             pending = nil
-                            guard stillValid() else {
-                                refused = "Nie wysłano: cel już nie czeka na odpowiedź (stan się zmienił)."
-                                return
-                            }
                             refused = nil
-                            model.markInFlight(action)
-                            Task { _ = await model.perform(action) }
+                            model.markInFlight(action)   // blokada przed każdym await (podwójne dotknięcie)
+                            Task {
+                                // Snapshot z odczytów co 30 s bywa sprzed kilku minut — przed wysłaniem świeży stan.
+                                if (model.lastRefreshOK ?? .distantPast) < Date().addingTimeInterval(-60) {
+                                    guard await model.refreshForAction() else {
+                                        model.clearInFlight(action)
+                                        refused = "Nie wysłano: nie udało się sprawdzić aktualnego stanu."
+                                        return
+                                    }
+                                }
+                                guard stillValid() else {
+                                    model.clearInFlight(action)
+                                    refused = "Nie wysłano: cel już nie czeka na odpowiedź (stan się zmienił)."
+                                    return
+                                }
+                                _ = await model.perform(action)
+                            }
                         }.buttonStyle(.borderedProminent).disabled(sending)
                     }
                 }

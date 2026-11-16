@@ -149,7 +149,7 @@ private struct OrkaPhoneWebView: UIViewRepresentable {
         func webView(_ webView: WKWebView, requestMediaCapturePermissionFor origin: WKSecurityOrigin,
                      initiatedByFrame frame: WKFrameInfo, type: WKMediaCaptureType,
                      decisionHandler: @escaping (WKPermissionDecision) -> Void) {
-            guard !stopped, let base, type == .microphone,
+            guard !stopped, parent.active, let base, type == .microphone,
                   origin.protocol == "https", origin.host.lowercased() == base.host?.lowercased(),
                   (origin.port == 0 ? 443 : origin.port) == (base.port ?? 443),
                   OrkaPhoneEndpoint.sameOrigin(frame.request.url, as: base) else {

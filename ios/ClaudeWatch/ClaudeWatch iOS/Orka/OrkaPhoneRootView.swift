@@ -96,7 +96,8 @@ struct OrkaPhoneRootView: View {
             if phase == .active { Task { await connection.check(quiet: true) } }
         }
         .onChange(of: selection) { old, new in
-            if old == .settings && new != .settings { Task { await connection.check() } }
+            // Ciche sprawdzenie: wyjście z Ustawień nie niszczy stosu Orki ani panelu (review r2).
+            if old == .settings && new != .settings { Task { await connection.check(quiet: true) } }
         }
         .onChange(of: connection.state) { _, state in
             // Najwyżej raz na uruchomienie i tylko z zakładek Orki — Agent i Ustawienia zostają osiągalne.
