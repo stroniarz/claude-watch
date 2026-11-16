@@ -140,6 +140,10 @@ final class OrkaPhoneModel: ObservableObject {
 
     func perform(_ action: OrkaPhoneAction) async -> OrkaActionResult {
         dropDataFromOtherMac()
+        guard action.base == HandsfreeSettings.baseURLString else {
+            inFlight.remove(action.targetKey)
+            return .notSent("Nie wysłano: adres Maca zmienił się po otwarciu tego ekranu — odśwież listę.")
+        }
         // Samo wysłanie nie jest automatycznie ponawiane, także po utracie połączenia.
         let key = action.targetKey
         inFlight.insert(key)

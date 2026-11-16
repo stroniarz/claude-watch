@@ -49,8 +49,10 @@ struct OrkaPhoneAction: Identifiable {
     let id: UUID
     let target: Target
     let text: String
+    /// Adres Maca, z którego pochodzi cel — akcja nie pójdzie do innego Maca po zmianie Ustawień (review Codex r3).
+    let base: String
 
-    init?(target: Target, text: String, id: UUID = UUID()) {
+    init?(target: Target, text: String, id: UUID = UUID(), base: String = HandsfreeSettings.baseURLString) {
         let clean = text.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !clean.isEmpty else { return nil }
         switch target {
@@ -62,6 +64,7 @@ struct OrkaPhoneAction: Identifiable {
         self.id = id
         self.target = target
         self.text = clean
+        self.base = base
     }
 
     var title: String {

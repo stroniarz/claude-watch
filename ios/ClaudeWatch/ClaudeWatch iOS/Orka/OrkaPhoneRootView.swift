@@ -6,6 +6,12 @@ import UIKit
 final class OrkaPhoneConnection: ObservableObject {
     @Published private(set) var state: OrkaPhoneAvailability = .checking
     @Published private(set) var settingsNote = "Uzupełnij adres Maca i token w Ustawieniach."
+    /// Zmienia się razem z adresem albo tokenem: ekran Orki i panel budują się wtedy od zera (review Codex r3).
+    @Published private(set) var configKey = OrkaPhoneConnection.currentConfigKey()
+
+    static func currentConfigKey() -> String {
+        HandsfreeSettings.baseURLString + "|" + String(HandsfreeSettings.token?.hashValue ?? 0)
+    }
     private var generation = UUID()
 
     /// `quiet`: ponowne sprawdzenie (powrót z tła, zmiana zakładki) nie podmienia gotowej treści na „sprawdzam” —
@@ -13,6 +19,8 @@ final class OrkaPhoneConnection: ObservableObject {
     func check(quiet: Bool = false) async {
         let id = UUID()
         generation = id
+        let key = Self.currentConfigKey()
+        if key != configKey { configKey = key }
         if !(quiet && state == .ready) { state = .checking }
         guard let base = OrkaPhoneEndpoint.baseURL(HandsfreeSettings.baseURL),
               let token = HandsfreeSettings.token else {
@@ -60,6 +68,7 @@ struct OrkaPhoneRootView: View {
         TabView(selection: $selection) {
             connectedContent {
                 OrkaPhoneHomeView(model: orka, active: selection == .orka && scenePhase != .background)
+                    .id(connection.configKey)
             }
             .tabItem { Label("Orka", systemImage: "bubble.left.and.bubble.right") }.tag(Tab.orka)
 
@@ -67,6 +76,7 @@ struct OrkaPhoneRootView: View {
                 OrkaPhonePanelView(active: selection == .panel && scenePhase != .background,
                                    retry: { Task { await connection.check() } },
                                    openSettings: { selection = .settings })
+                    .id(connection.configKey)
             }
             .tabItem { Label("Panel", systemImage: "rectangle.3.group") }.tag(Tab.panel)
 
