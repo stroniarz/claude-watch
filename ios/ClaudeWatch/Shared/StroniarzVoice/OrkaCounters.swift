@@ -14,9 +14,28 @@ struct OrkaCounters: Codable, Equatable, Sendable {
         let kanal: String?
         let powod: String?
 
+        enum CodingKeys: String, CodingKey { case nazwa, issue, konto, id, kanal, powod }
+
+        init(from decoder: Decoder) throws {
+            let c = try decoder.container(keyedBy: CodingKeys.self)
+            nazwa = try c.decode(String.self, forKey: .nazwa)
+            issue = Self.cleanIssue(try c.decodeIfPresent(String.self, forKey: .issue))
+            konto = try c.decode(String.self, forKey: .konto)
+            id = try c.decodeIfPresent(String.self, forKey: .id)
+            kanal = try c.decodeIfPresent(String.self, forKey: .kanal)
+            powod = try c.decodeIfPresent(String.self, forKey: .powod)
+        }
+
+        /// `stan.py` wstawia „-”, gdy sesja nie ma issue — to nie jest numer zgłoszenia.
+        static func cleanIssue(_ raw: String?) -> String? {
+            guard let value = raw?.trimmingCharacters(in: .whitespaces), !value.isEmpty,
+                  value != "-", value != "—" else { return nil }
+            return value
+        }
+
         init(nazwa: String, issue: String?, konto: String, id: String? = nil, kanal: String? = nil, powod: String? = nil) {
             self.nazwa = nazwa
-            self.issue = issue
+            self.issue = Self.cleanIssue(issue)
             self.konto = konto
             self.id = id
             self.kanal = kanal

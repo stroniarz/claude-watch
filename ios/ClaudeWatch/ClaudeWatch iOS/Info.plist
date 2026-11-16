@@ -26,6 +26,12 @@
 	</array>
 	<key>NSLocalNetworkUsageDescription</key>
 	<string>Agent Watch needs to find your Mac running the bridge server on your local network.</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>Mikrofon pozwala rozmawiać z Orką w panelu na Twoim Macu.</string>
+	<key>LSApplicationQueriesSchemes</key>
+	<array>
+		<string>tailscale</string>
+	</array>
 	<key>UIBackgroundModes</key>
 	<array>
 		<string>audio</string>

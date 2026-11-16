@@ -10,6 +10,7 @@
 		003DB10D0B0432E4336057B1 /* WidgetKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D50E11980E618B9FC724F9E9 /* WidgetKit.framework */; };
 		00472D1EE2187C564BC0F22B /* VoicePhrases.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2462FB6CD4379B9E70A3F4FB /* VoicePhrases.swift */; };
 		02F63FF8069B8294962F4F9D /* OrkaTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C3B0FCD5534B0E54DE4877CD /* OrkaTests.swift */; };
+		035D486CD34A55999425616A /* OrkaPhoneTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 443DFB5D3D1C1AA19F6103D7 /* OrkaPhoneTests.swift */; };
 		037E5206377C1F352D63A8B3 /* OrkaActionViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = 381857ED365FB6FD00FEFB6E /* OrkaActionViews.swift */; };
 		056CF0B6ED69C08286F46458 /* ApprovalRequest.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3B42442B8133715613F1B33C /* ApprovalRequest.swift */; };
 		0C354333AE5E18C4445957DD /* TerminalLine.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0FDEABAF052B796E83242EB1 /* TerminalLine.swift */; };
@@ -18,6 +19,7 @@
 		146A159A46875A11C9197458 /* ComplicationProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = E05A5819BA45145C8992456D /* ComplicationProvider.swift */; };
 		15E4E70FE334210E9CEE36C5 /* HandsfreeClientTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 690B161EDCB5BBD21782A012 /* HandsfreeClientTests.swift */; };
 		19033E21D59CF39E58729E88 /* OrkaHomeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD76D274827E5FB4C302D75C /* OrkaHomeView.swift */; };
+		1CA943BAC93B151C63B92EC0 /* OrkaPhoneRootView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FB8206D45AFF0DC01621C201 /* OrkaPhoneRootView.swift */; };
 		1D59400FB238BFA588E37DB1 /* StatusDashboard.swift in Sources */ = {isa = PBXBuildFile; fileRef = 103838389D179B4E7BB59FE9 /* StatusDashboard.swift */; };
 		2030292035A662B5C1DD1C26 /* WatchMessage.swift in Sources */ = {isa = PBXBuildFile; fileRef = D315314A06584F20A95E7DB6 /* WatchMessage.swift */; };
 		2195C8818F84EDB4E0A5AD68 /* MultiSessionPager.swift in Sources */ = {isa = PBXBuildFile; fileRef = AD19B0B5E496A5FE71AC4A4B /* MultiSessionPager.swift */; };
@@ -54,6 +56,7 @@
 		6A6376EBDE858B8212DE6FCF /* RelayService.swift in Sources */ = {isa = PBXBuildFile; fileRef = B401B158966DA9BF77B5EB50 /* RelayService.swift */; };
 		6AFDB2757A13AF003F9CCAE1 /* AgentSession.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6346DB31D379397056FB2AEC /* AgentSession.swift */; };
 		6BB8C42991468DB0E89B48AA /* WatchMessage.swift in Sources */ = {isa = PBXBuildFile; fileRef = D315314A06584F20A95E7DB6 /* WatchMessage.swift */; };
+		71C4FF1E6D97A50E718C842D /* OrkaPhoneModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = D224C24C3ADAD30553DCA281 /* OrkaPhoneModel.swift */; };
 		72DF07CC328D61EC097A5C21 /* OrkaWidgetView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA9D7EA6033D1233916080A6 /* OrkaWidgetView.swift */; };
 		7444DC329E5872F468957C9B /* BonjourDiscovery.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3EA2B15D26296793FFC0AC5D /* BonjourDiscovery.swift */; };
 		79FBA3B9463F5F36337D5732 /* SpeechThinkingCue.swift in Sources */ = {isa = PBXBuildFile; fileRef = 372F301D8F29E739AEC108F6 /* SpeechThinkingCue.swift */; };
@@ -72,6 +75,7 @@
 		9E5D88133812A8C54BE8B335 /* ClaudeWatchApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = F4BB0DBA06997A7A93FE5E2F /* ClaudeWatchApp.swift */; };
 		9F1C0E865B63F7A44569EBDE /* SSEClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7A793D9B158E02174ED968B0 /* SSEClient.swift */; };
 		A0CD240ABF9028F0365A57A4 /* OrkaClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0C8EFEBA941F01D4F5B08103 /* OrkaClient.swift */; };
+		A119A2D9151CED6FD99168A7 /* OrkaPhoneLogic.swift in Sources */ = {isa = PBXBuildFile; fileRef = 68EC9E201AEA94531A90C785 /* OrkaPhoneLogic.swift */; };
 		A175593B84E37799D386C3D6 /* SpeechThinkingCue.swift in Sources */ = {isa = PBXBuildFile; fileRef = 372F301D8F29E739AEC108F6 /* SpeechThinkingCue.swift */; };
 		A26130D38A3CF5253274425A /* StroniarzIntents.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1B19EC7969C6BBFF89C15EB1 /* StroniarzIntents.swift */; };
 		A3FD464F96EE1A384B0B0BF6 /* OrkaWidget.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = B5C2CCEF65A7DFC510D6D475 /* OrkaWidget.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
@@ -87,14 +91,17 @@
 		C14ED76603B07ED64BA096EA /* ClaudeWatchWatchApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 378B120DB4409D4BE7E1578E /* ClaudeWatchWatchApp.swift */; };
 		C19D82167F1828CB13CE9843 /* WatchSessionManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 68FBA67A3544CEF418CF023C /* WatchSessionManager.swift */; };
 		C22AE3900EA06ADA3B93EF88 /* OrkaChat.swift in Sources */ = {isa = PBXBuildFile; fileRef = 96A184BBA4815545878392DC /* OrkaChat.swift */; };
+		C2F88C1E8AB52932F6F87592 /* OrkaPhoneLogic.swift in Sources */ = {isa = PBXBuildFile; fileRef = 68EC9E201AEA94531A90C785 /* OrkaPhoneLogic.swift */; };
 		C86D0B9C32631D78A4C11205 /* OrkaSync.swift in Sources */ = {isa = PBXBuildFile; fileRef = 526701685CDB6C04A29C5842 /* OrkaSync.swift */; };
 		CA6DD0BE4E438FDF85EC6481 /* VoiceInputView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0B4CE22624BFF32BAC9AD1D8 /* VoiceInputView.swift */; };
+		CDE545BBC7B89CA0B4904112 /* OrkaPhoneHomeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 35DB28601D12AE8A862CFEB2 /* OrkaPhoneHomeView.swift */; };
 		D33D58F16A5735DE24FB6102 /* TerminalLine.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0FDEABAF052B796E83242EB1 /* TerminalLine.swift */; };
 		D73C73D521E0F95B2C18CC7B /* Color+Hex.swift in Sources */ = {isa = PBXBuildFile; fileRef = D1DF2BEEDD4C382E734A9998 /* Color+Hex.swift */; };
 		D8441A272FBA9E734FBE8E9D /* VoicePhrases.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2462FB6CD4379B9E70A3F4FB /* VoicePhrases.swift */; };
 		D9970CFAD938CB9DF740EE78 /* OrkaChat.swift in Sources */ = {isa = PBXBuildFile; fileRef = 96A184BBA4815545878392DC /* OrkaChat.swift */; };
 		DA6999CAD5D1424199066926 /* OrkaAudio.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1F9C7C8A7DDAB2AA81A66D67 /* OrkaAudio.swift */; };
 		DCE274895FA3FD6E784C9F57 /* ApprovalView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 98B6945BBB9FD551235039E4 /* ApprovalView.swift */; };
+		E6DF7290BAEFE6F6DF009D09 /* OrkaPhonePanelView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A6A87138D421C615C1E3CFF0 /* OrkaPhonePanelView.swift */; };
 		E98F410B3104C20DA98FCDD4 /* Color+Hex.swift in Sources */ = {isa = PBXBuildFile; fileRef = D1DF2BEEDD4C382E734A9998 /* Color+Hex.swift */; };
 		E9CD84EF8D892FDC607F4E35 /* SpeechThinkingCue.swift in Sources */ = {isa = PBXBuildFile; fileRef = 372F301D8F29E739AEC108F6 /* SpeechThinkingCue.swift */; };
 		ED44F4F97DC4EA01CA9CA7EF /* ClaudeMascot.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7B94DD051BD503B11365D6B9 /* ClaudeMascot.swift */; };
@@ -161,17 +168,20 @@
 		2462FB6CD4379B9E70A3F4FB /* VoicePhrases.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VoicePhrases.swift; sourceTree = "<group>"; };
 		2B831D2BFB4BE9A940187EF9 /* ClaudeWatch.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = ClaudeWatch.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		303943189CE302F154CA350B /* ClaudeWatchWatch.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = ClaudeWatchWatch.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		35DB28601D12AE8A862CFEB2 /* OrkaPhoneHomeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OrkaPhoneHomeView.swift; sourceTree = "<group>"; };
 		372F301D8F29E739AEC108F6 /* SpeechThinkingCue.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpeechThinkingCue.swift; sourceTree = "<group>"; };
 		378B120DB4409D4BE7E1578E /* ClaudeWatchWatchApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClaudeWatchWatchApp.swift; sourceTree = "<group>"; };
 		381857ED365FB6FD00FEFB6E /* OrkaActionViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OrkaActionViews.swift; sourceTree = "<group>"; };
 		3A8D708937263FAAC2A40CCA /* OutputRingBuffer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OutputRingBuffer.swift; sourceTree = "<group>"; };
 		3B42442B8133715613F1B33C /* ApprovalRequest.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ApprovalRequest.swift; sourceTree = "<group>"; };
 		3EA2B15D26296793FFC0AC5D /* BonjourDiscovery.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BonjourDiscovery.swift; sourceTree = "<group>"; };
+		443DFB5D3D1C1AA19F6103D7 /* OrkaPhoneTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OrkaPhoneTests.swift; sourceTree = "<group>"; };
 		479652736EB6AA3E81BD9C79 /* OrkaWidget.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OrkaWidget.swift; sourceTree = "<group>"; };
 		526701685CDB6C04A29C5842 /* OrkaSync.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OrkaSync.swift; sourceTree = "<group>"; };
 		5B51788852DF163154F0D978 /* WatchBridgeClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchBridgeClient.swift; sourceTree = "<group>"; };
 		6024E04F2B37D81C8CA74D27 /* NotificationService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationService.swift; sourceTree = "<group>"; };
 		6346DB31D379397056FB2AEC /* AgentSession.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AgentSession.swift; sourceTree = "<group>"; };
+		68EC9E201AEA94531A90C785 /* OrkaPhoneLogic.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OrkaPhoneLogic.swift; sourceTree = "<group>"; };
 		68FBA67A3544CEF418CF023C /* WatchSessionManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchSessionManager.swift; sourceTree = "<group>"; };
 		690B161EDCB5BBD21782A012 /* HandsfreeClientTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HandsfreeClientTests.swift; sourceTree = "<group>"; };
 		7286024A0F74A978473A0CF0 /* PairingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PairingView.swift; sourceTree = "<group>"; };
@@ -188,6 +198,7 @@
 		9FF877E177FAD26914DAA78D /* HapticManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HapticManager.swift; sourceTree = "<group>"; };
 		A0197766C66BEEF61093A925 /* SessionView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SessionView.swift; sourceTree = "<group>"; };
 		A1374FD5756B7A200866D196 /* OrkaWidgetGallery.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OrkaWidgetGallery.swift; sourceTree = "<group>"; };
+		A6A87138D421C615C1E3CFF0 /* OrkaPhonePanelView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OrkaPhonePanelView.swift; sourceTree = "<group>"; };
 		AA9D7EA6033D1233916080A6 /* OrkaWidgetView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OrkaWidgetView.swift; sourceTree = "<group>"; };
 		AB2A44058239AEE7EFC17FD2 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		AC024BD6AE4235575BB68A49 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
@@ -205,6 +216,7 @@
 		C3B0FCD5534B0E54DE4877CD /* OrkaTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OrkaTests.swift; sourceTree = "<group>"; };
 		D1DF2BEEDD4C382E734A9998 /* Color+Hex.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Color+Hex.swift"; sourceTree = "<group>"; };
 		D2084D859AEDF739A7B8CD49 /* ConnectionStatusView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConnectionStatusView.swift; sourceTree = "<group>"; };
+		D224C24C3ADAD30553DCA281 /* OrkaPhoneModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OrkaPhoneModel.swift; sourceTree = "<group>"; };
 		D315314A06584F20A95E7DB6 /* WatchMessage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchMessage.swift; sourceTree = "<group>"; };
 		D50E11980E618B9FC724F9E9 /* WidgetKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = WidgetKit.framework; path = System/Library/Frameworks/WidgetKit.framework; sourceTree = SDKROOT; };
 		DD76D274827E5FB4C302D75C /* OrkaHomeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OrkaHomeView.swift; sourceTree = "<group>"; };
@@ -215,6 +227,7 @@
 		ECDFCA3CF3E5D3EACFF56175 /* ClaudeWatchWatch.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = ClaudeWatchWatch.entitlements; sourceTree = "<group>"; };
 		F237360F4AF9396B7B3C1881 /* AgentIcon.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AgentIcon.swift; sourceTree = "<group>"; };
 		F4BB0DBA06997A7A93FE5E2F /* ClaudeWatchApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClaudeWatchApp.swift; sourceTree = "<group>"; };
+		FB8206D45AFF0DC01621C201 /* OrkaPhoneRootView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OrkaPhoneRootView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -318,6 +331,7 @@
 				0FADAF62ED166E55AA6A1222 /* Info.plist */,
 				52778CF6F3B51D77578F2D0A /* App */,
 				F8CE9FAEDC72D7577D11CD43 /* Networking */,
+				D96FD2251F3323A3DCC0B9BF /* Orka */,
 				96139F8A5D41ACFDAE421AA2 /* Services */,
 				ECADA2E5D9E8E5F497A75B78 /* Views */,
 			);
@@ -424,6 +438,18 @@
 			path = Complications;
 			sourceTree = "<group>";
 		};
+		D96FD2251F3323A3DCC0B9BF /* Orka */ = {
+			isa = PBXGroup;
+			children = (
+				35DB28601D12AE8A862CFEB2 /* OrkaPhoneHomeView.swift */,
+				68EC9E201AEA94531A90C785 /* OrkaPhoneLogic.swift */,
+				D224C24C3ADAD30553DCA281 /* OrkaPhoneModel.swift */,
+				A6A87138D421C615C1E3CFF0 /* OrkaPhonePanelView.swift */,
+				FB8206D45AFF0DC01621C201 /* OrkaPhoneRootView.swift */,
+			);
+			path = Orka;
+			sourceTree = "<group>";
+		};
 		DBB96B0AFBFF3C54D6CADEFD /* App */ = {
 			isa = PBXGroup;
 			children = (
@@ -448,6 +474,7 @@
 			children = (
 				BEE3C37C0C12B866A39D8889 /* ConversationEngineTests.swift */,
 				690B161EDCB5BBD21782A012 /* HandsfreeClientTests.swift */,
+				443DFB5D3D1C1AA19F6103D7 /* OrkaPhoneTests.swift */,
 				C3B0FCD5534B0E54DE4877CD /* OrkaTests.swift */,
 			);
 			path = StroniarzVoiceTests;
@@ -642,6 +669,11 @@
 				C22AE3900EA06ADA3B93EF88 /* OrkaChat.swift in Sources */,
 				A0CD240ABF9028F0365A57A4 /* OrkaClient.swift in Sources */,
 				2FFDFF171C0DE744836A51FC /* OrkaCounters.swift in Sources */,
+				CDE545BBC7B89CA0B4904112 /* OrkaPhoneHomeView.swift in Sources */,
+				C2F88C1E8AB52932F6F87592 /* OrkaPhoneLogic.swift in Sources */,
+				71C4FF1E6D97A50E718C842D /* OrkaPhoneModel.swift in Sources */,
+				E6DF7290BAEFE6F6DF009D09 /* OrkaPhonePanelView.swift in Sources */,
+				1CA943BAC93B151C63B92EC0 /* OrkaPhoneRootView.swift in Sources */,
 				EF2F87ED856D086AF4D0AB11 /* OrkaSync.swift in Sources */,
 				2D1F77586019751BCB13FF28 /* OutputRingBuffer.swift in Sources */,
 				5980D58F184DBB03B1CE3D5C /* PairingView.swift in Sources */,
@@ -720,6 +752,8 @@
 				D9970CFAD938CB9DF740EE78 /* OrkaChat.swift in Sources */,
 				2D0672DA18B548C5B18D9BDF /* OrkaClient.swift in Sources */,
 				0C64C7E3FBB1562A9E16F2D2 /* OrkaCounters.swift in Sources */,
+				A119A2D9151CED6FD99168A7 /* OrkaPhoneLogic.swift in Sources */,
+				035D486CD34A55999425616A /* OrkaPhoneTests.swift in Sources */,
 				C86D0B9C32631D78A4C11205 /* OrkaSync.swift in Sources */,
 				02F63FF8069B8294962F4F9D /* OrkaTests.swift in Sources */,
 				E9CD84EF8D892FDC607F4E35 /* SpeechThinkingCue.swift in Sources */,
