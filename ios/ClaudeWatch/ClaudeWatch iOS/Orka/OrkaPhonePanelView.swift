@@ -8,6 +8,9 @@ struct OrkaPhonePanelView: View {
     @State private var failed = false
     @State private var loading = true
     @State private var reloadID = UUID()
+    /// Panel tworzony raz i trzymany przy zmianie karty/tle: zniszczenie dokumentu w trakcie akcji gubiło
+    /// jej wynik i kusiło do ponownego „wdrażaj” (review Codex r1). Poza kartą tylko mikrofon i dźwięk są wyłączane.
+    @State private var started = false
 
     var body: some View {
         NavigationStack {
@@ -19,12 +22,13 @@ struct OrkaPhonePanelView: View {
                         reloadID = UUID()
                         retry()
                     }, openSettings: openSettings)
-                } else if active {
+                } else if started || active {
                     ZStack {
-                        OrkaPhoneWebView(failed: $failed, loading: $loading, openSettings: openSettings)
+                        OrkaPhoneWebView(failed: $failed, loading: $loading, active: active, openSettings: openSettings)
                             .id(reloadID)
                         if loading { ProgressView("Ładuję panel Orki…").padding().background(.regularMaterial).clipShape(RoundedRectangle(cornerRadius: 12)) }
                     }
+                    .onAppear { started = true }
                 } else {
                     Color.clear
                 }
@@ -38,6 +42,7 @@ struct OrkaPhonePanelView: View {
 private struct OrkaPhoneWebView: UIViewRepresentable {
     @Binding var failed: Bool
     @Binding var loading: Bool
+    let active: Bool
     let openSettings: () -> Void
 
     func makeCoordinator() -> Coordinator { Coordinator(parent: self) }
@@ -64,7 +69,14 @@ private struct OrkaPhoneWebView: UIViewRepresentable {
         return web
     }
 
-    func updateUIView(_ uiView: WKWebView, context: Context) { context.coordinator.parent = self }
+    func updateUIView(_ uiView: WKWebView, context: Context) {
+        context.coordinator.parent = self
+        if !active {
+            // Poza kartą albo w tle: bez mikrofonu i dźwięku, ale dokument (i trwające akcje) zostają.
+            uiView.pauseAllMediaPlayback(completionHandler: nil)
+            uiView.setMicrophoneCaptureState(.none, completionHandler: nil)
+        }
+    }
 
     static func dismantleUIView(_ web: WKWebView, coordinator: Coordinator) {
         coordinator.stopped = true

@@ -18,6 +18,12 @@ final class OrkaPhoneModel: ObservableObject {
 
     private static let chatKey = "orka.phone.conversation.v1"
     private static let snapshotKey = "orka.phone.snapshot.v1"
+    private static let baseKey = "orka.phone.base.v1"
+    /// Adres Maca, z którego pochodzą snapshot i kursor — po zmianie adresu dane są unieważniane,
+    /// żeby nr blokera/sesji z jednego Maca nie poszedł do innego (review Codex r1).
+    private var dataBase: String? = UserDefaults.standard.string(forKey: OrkaPhoneModel.baseKey)
+    /// Chwila ostatniego udanego odczytu liczników (do „sesja nadal czeka”).
+    private(set) var lastRefreshOK: Date?
     private var visible = false
     private var chatVisible = false
     private var runID = UUID()
@@ -72,7 +78,33 @@ final class OrkaPhoneModel: ObservableObject {
         stopSpeaking()
     }
 
+    /// Unieważnia dane z innego adresu Maca (zmiana w Ustawieniach).
+    private func dropDataFromOtherMac() {
+        let current = HandsfreeSettings.baseURLString
+        guard dataBase != current else { return }
+        if dataBase != nil {
+            snapshot = nil
+            conversation.cursor = nil
+            UserDefaults.standard.removeObject(forKey: Self.snapshotKey)
+            saveChat()
+        }
+        dataBase = current
+        UserDefaults.standard.set(current, forKey: Self.baseKey)
+    }
+
+    /// Przed akcją: poczekaj na trwający odczyt i zrób świeży; `true` tylko gdy się udał.
+    func refreshForAction() async -> Bool {
+        while loading {
+            try? await Task.sleep(for: .milliseconds(100))
+            if Task.isCancelled { return false }
+        }
+        let started = Date()
+        await refresh(fresh: true)
+        return (lastRefreshOK ?? .distantPast) >= started
+    }
+
     func refresh(fresh: Bool = false) async {
+        dropDataFromOtherMac()
         guard !loading else {
             if fresh { freshPending = true }
             return
@@ -88,6 +120,7 @@ final class OrkaPhoneModel: ObservableObject {
         switch await client.counters(fresh: fresh) {
         case .success(let counters):
             snapshot = OrkaSnapshot(counters: counters)
+            if counters.wiekS != nil { lastRefreshOK = Date() }
             error = counters.wiekS == nil ? "Mac jeszcze zbiera stan panelu. Spróbuj za chwilę." : nil
             if let data = try? JSONEncoder().encode(snapshot) {
                 UserDefaults.standard.set(data, forKey: Self.snapshotKey)
@@ -100,6 +133,7 @@ final class OrkaPhoneModel: ObservableObject {
     }
 
     func perform(_ action: OrkaPhoneAction) async -> OrkaActionResult {
+        dropDataFromOtherMac()
         // Samo wysłanie nie jest automatycznie ponawiane, także po utracie połączenia.
         let key = action.targetKey
         inFlight.insert(key)

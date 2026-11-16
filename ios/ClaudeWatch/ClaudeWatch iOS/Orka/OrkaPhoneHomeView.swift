@@ -107,6 +107,7 @@ struct OrkaPhoneSessionView: View {
     @ObservedObject var model: OrkaPhoneModel
     let session: OrkaCounters.Waiting
     @State private var checked = false
+    @State private var refreshFailed = false
 
     /// Po świeżym odczycie: czy ta sesja (konto + id) nadal czeka. Serwer sprawdza tylko istnienie i cel,
     /// nie stan — „zmerguj” nie może trafić do sesji, która zajęła się czymś innym (review r1).
@@ -122,7 +123,13 @@ struct OrkaPhoneSessionView: View {
                 if let issue = session.issue { Text(issue) }
                 Text("Konto \(session.konto)").foregroundStyle(.secondary)
             }
-            if !checked {
+            if refreshFailed {
+                Section {
+                    Label("Nie udało się sprawdzić, czy sesja nadal czeka — odpowiedź z telefonu wstrzymana.",
+                          systemImage: "exclamationmark.triangle").foregroundStyle(.orange)
+                    Button("Sprawdź ponownie") { Task { await recheck() } }
+                }
+            } else if !checked {
                 Section { ProgressView("Sprawdzam, czy sesja nadal czeka…") }
             } else if !stillWaiting {
                 Section {
@@ -130,7 +137,8 @@ struct OrkaPhoneSessionView: View {
                     Text("Jeśli chcesz coś jej przekazać, napisz do Orki.").foregroundStyle(.secondary)
                 }
             } else if session.id?.isEmpty == false, session.kanal?.isEmpty == false {
-                OrkaPhoneReplyForm(model: model, target: .session(session), quickReplies: OrkaActions.quickReplies)
+                OrkaPhoneReplyForm(model: model, target: .session(session), quickReplies: OrkaActions.quickReplies,
+                                   stillValid: { stillWaiting })
             } else {
                 Section {
                     Text(session.powod ?? "Do tej sesji nie da się teraz napisać z telefonu.")
@@ -139,10 +147,15 @@ struct OrkaPhoneSessionView: View {
             }
         }
         .navigationTitle("Odpowiedź sesji")
-        .task {
-            await model.refresh(fresh: true)
-            checked = true
-        }
+        .task { await recheck() }
+    }
+
+    private func recheck() async {
+        refreshFailed = false
+        checked = false
+        let ok = await model.refreshForAction()
+        refreshFailed = !ok
+        checked = ok
     }
 }
 
@@ -160,13 +173,14 @@ struct OrkaPhoneBlockerView: View {
             if blocker.typ == "sekret" {
                 Section { Label("Odpowiedz na Macu — sekretów nie podawaj w telefonie.", systemImage: "lock") }
             } else if blocker.mozna {
-                OrkaPhoneReplyForm(model: model, target: .blocker(blocker), quickReplies: ["ok, leć"])
+                OrkaPhoneReplyForm(model: model, target: .blocker(blocker), quickReplies: ["ok, leć"],
+                                   stillValid: { model.snapshot?.counters.blokeryLista.contains { $0.nr == blocker.nr && $0.mozna } ?? false })
             } else {
                 Section { Text("Odpowiedź na ten bloker jest już w drodze. Sprawdź stan na Macu.") }
             }
         }
         .navigationTitle("Bloker")
-        .task { await model.refresh(fresh: true) }
+        .task { _ = await model.refreshForAction() }
     }
 }
 
@@ -175,17 +189,14 @@ private struct OrkaPhoneReplyForm: View {
     @ObservedObject var model: OrkaPhoneModel
     let target: OrkaPhoneAction.Target
     let quickReplies: [String]
+    /// Sprawdzane tuż przed wysłaniem na aktualnym stanie (sesja nadal czeka / bloker nadal otwarty).
+    let stillValid: () -> Bool
     @State private var text = ""
     @State private var pending: OrkaPhoneAction?
+    @State private var refused: String?
 
     private var sending: Bool { model.inFlight.contains(OrkaPhoneAction.key(target)) }
     private var recent: (text: String, result: OrkaActionResult, at: Date)? { model.recentResult(for: target) }
-    /// Po „dostarczone” albo „nie wiadomo” nie wysyłamy ponownie z tego ekranu; „nie wysłano” jest pewne — można poprawić.
-    private var locked: Bool {
-        guard let r = recent?.result else { return false }
-        if case .notSent = r { return false }
-        return true
-    }
 
     var body: some View {
         Section("Odpowiedz") {
@@ -203,8 +214,11 @@ private struct OrkaPhoneReplyForm: View {
             Button("Dalej") { pending = OrkaPhoneAction(target: target, text: text) }
                 .disabled(text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
             if sending { ProgressView("Wysyłam…") }
+            if let refused { Text(refused).foregroundStyle(.orange) }
         }
-        .disabled(sending || locked)
+        // Bez blokady całej sesji na czas: powtórkę tego samego tekstu w 2 min odrzuca serwer,
+        // a nowe pytanie sesji może dostać nową odpowiedź (review Codex r1).
+        .disabled(sending)
         .sheet(item: $pending) { action in
             NavigationStack {
                 Form {
@@ -214,8 +228,13 @@ private struct OrkaPhoneReplyForm: View {
                         Button("Wyślij") {
                             // Blokada ustawia się synchronicznie, przed uruchomieniem żądania.
                             guard !sending else { return }
-                            model.markInFlight(action)
                             pending = nil
+                            guard stillValid() else {
+                                refused = "Nie wysłano: cel już nie czeka na odpowiedź (stan się zmienił)."
+                                return
+                            }
+                            refused = nil
+                            model.markInFlight(action)
                             Task { _ = await model.perform(action) }
                         }.buttonStyle(.borderedProminent).disabled(sending)
                     }
